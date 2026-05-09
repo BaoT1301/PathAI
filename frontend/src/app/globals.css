@@ -17,6 +17,8 @@
   --color-gray-200: #e4e4e7;
   --color-gray-100: #f4f4f5;
   --color-gray-50: #fafafa;
+  /* Brand blue */
+  --color-brand: #0051d5;
 }
 
 @variant dark (html.dark &);
@@ -64,6 +66,20 @@ body {
 }
 :root.dark ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
+}
+
+/* Landing page: dot grid background */
+.grid-bg {
+  background-image: radial-gradient(circle at 2px 2px, #e5e7eb 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+/* Landing page: hero headline gradient */
+.hero-gradient-text {
+  background: linear-gradient(135deg, #000000 0%, #4b5563 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 @keyframes float {

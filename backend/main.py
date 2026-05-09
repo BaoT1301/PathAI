@@ -1,12 +1,16 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
-from fastapi import FastAPI, Depends, Query, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, Query, Request, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import engine, get_db, Base
 from models import Job, Application, JobAlert, SavedJob, UserProfile
-from schemas import JobResponse, JobListResponse, ResumeUploadResponse, ApplicationCreate, ApplicationUpdate, ApplicationResponse, InterviewPrepRequest, InterviewPrepResponse, InterviewQuestion, JobAlertCreate, JobAlertResponse, CoverLetterRequest, CoverLetterResponse, SavedJobResponse, SavedResumeResponse
+from schemas import JobResponse, JobListResponse, ResumeUploadResponse, ApplicationCreate, ApplicationUpdate, ApplicationResponse, InterviewPrepRequest, InterviewPrepResponse, InterviewQuestion, JobAlertCreate, JobAlertResponse, CoverLetterRequest, CoverLetterResponse, SavedJobResponse, SavedResumeResponse, JobCreateRequest
 from services.embedding import get_embedding
 from services.resume_parser import extract_text, parse_resume
 from services.matching import get_matched_jobs
@@ -14,8 +18,10 @@ from services.skill_gap import analyze_skill_gap
 from services.interview_coach import generate_interview_prep
 from services.adzuna_client import fetch_and_store_adzuna_jobs, seed_jobs_from_adzuna
 from auth import get_current_user, require_auth
-from config import FRONTEND_URL
+from config import FRONTEND_URL, OPENAI_MODEL
 import json
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 class ConnectionManager:
@@ -97,6 +103,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Personalized Career Site API", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _origins = [FRONTEND_URL, "http://localhost:3000"]
 # Also allow Vercel preview deployments (e.g. path-ai-xxxx-user.vercel.app)
@@ -108,8 +116,8 @@ app.add_middleware(
     allow_origins=_origins,
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 
@@ -181,8 +189,50 @@ async def get_job(job_id: str, db: AsyncSession = Depends(get_db)):
     return resp
 
 
+@app.get("/api/jobs/{job_id}/match-score")
+@limiter.limit("20/minute")
+async def get_job_match_score(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Return a personalized AI match score for this job based on the user's saved resume."""
+    user_profile = await db.get(UserProfile, user["sub"])
+    if not user_profile or not user_profile.resume_summary:
+        raise HTTPException(status_code=404, detail="No saved resume")
+
+    from uuid import UUID as _UUID
+    try:
+        job_uuid = _UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID")
+
+    result = await db.execute(select(Job).where(Job.id == job_uuid))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.embedding is None:
+        raise HTTPException(status_code=422, detail="Job not indexed yet")
+
+    resume_embedding = await get_embedding(user_profile.resume_summary)
+
+    dist_result = await db.execute(
+        select(Job.embedding.cosine_distance(resume_embedding).label("dist"))
+        .where(Job.id == job_uuid)
+    )
+    distance = dist_result.scalar()
+    cosine_sim = 1.0 - float(distance)
+
+    from services.matching import _normalize_score
+    score = _normalize_score(cosine_sim, [], f"{job.title} {job.description}")
+
+    return {"match_score": round(score, 1), "job_id": job_id}
+
+
 @app.get("/api/jobs/{job_id}/summary")
-async def get_job_summary(job_id: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def get_job_summary(request: Request, job_id: str, db: AsyncSession = Depends(get_db)):
     """Return an AI-generated structured summary of the job. Cached in DB after first call."""
     result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
@@ -212,7 +262,7 @@ Return ONLY valid JSON, no markdown."""
 
     try:
         resp = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
             max_tokens=400,
@@ -242,7 +292,9 @@ Return ONLY valid JSON, no markdown."""
 
 
 @app.post("/api/resume/upload", response_model=ResumeUploadResponse)
+@limiter.limit("10/minute")
 async def upload_resume(
+    request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
@@ -274,7 +326,7 @@ async def upload_resume(
     )
 
     # Vector search against already-seeded DB — fast, no external API calls
-    db_jobs, _db_total = await get_matched_jobs(db, resume_embedding, profile, 1, 60)
+    db_jobs, _db_total, seniority_relaxed = await get_matched_jobs(db, resume_embedding, profile, 1, 60)
     print(f"[DB] {len(db_jobs)} matched jobs from database")
 
     merged = sorted(db_jobs, key=lambda j: j.get("match_score") or 0, reverse=True)
@@ -312,11 +364,14 @@ async def upload_resume(
         profile=profile,
         matched_jobs=matched_jobs,
         skill_gaps=skill_gaps,
+        seniority_relaxed=seniority_relaxed,
     )
 
 
 @app.post("/api/jobs/{job_id}/interview-prep", response_model=InterviewPrepResponse)
+@limiter.limit("20/minute")
 async def interview_prep(
+    request: Request,
     job_id: str,
     body: InterviewPrepRequest,
     db: AsyncSession = Depends(get_db),
@@ -354,7 +409,9 @@ async def get_saved_resume(
 
 
 @app.post("/api/jobs/{job_id}/cover-letter", response_model=CoverLetterResponse)
+@limiter.limit("20/minute")
 async def generate_cover_letter(
+    request: Request,
     job_id: str,
     body: CoverLetterRequest,
     db: AsyncSession = Depends(get_db),
@@ -391,7 +448,7 @@ async def generate_cover_letter(
     )
 
     response = await openai.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[{"role": "user", "content": prompt}],
         max_tokens=500,
         temperature=0.7,
@@ -486,20 +543,12 @@ async def job_feed(websocket: WebSocket):
 # Job creation endpoint (triggers WS broadcast)
 # ─────────────────────────────────────────────
 
-from pydantic import BaseModel as _BaseModel
-
-
-class JobCreateRequest(_BaseModel):
-    title: str
-    description: str
-    location: str
-    department: str
-    seniority: str
-    salary_range: str
-
-
 @app.post("/api/jobs", response_model=JobResponse)
-async def create_job(body: JobCreateRequest, db: AsyncSession = Depends(get_db)):
+async def create_job(
+    body: JobCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
     """Creates a new job and broadcasts it to all connected WebSocket clients."""
     import asyncio
 
@@ -587,25 +636,22 @@ async def list_applications(
     user_id = user["sub"]
     result = await db.execute(
         select(Application)
+        .options(joinedload(Application.job))
         .where(Application.user_id == user_id)
         .order_by(Application.applied_at.desc())
     )
-    applications = result.scalars().all()
-
-    responses = []
-    for app in applications:
-        await db.refresh(app, ["job"])
-        responses.append(
-            ApplicationResponse(
-                id=app.id,
-                job=JobResponse.model_validate(app.job),
-                status=app.status,
-                notes=app.notes,
-                applied_at=app.applied_at,
-                updated_at=app.updated_at,
-            )
+    applications = result.scalars().unique().all()
+    return [
+        ApplicationResponse(
+            id=app.id,
+            job=JobResponse.model_validate(app.job),
+            status=app.status,
+            notes=app.notes,
+            applied_at=app.applied_at,
+            updated_at=app.updated_at,
         )
-    return responses
+        for app in applications
+    ]
 
 
 @app.patch("/api/applications/{application_id}", response_model=ApplicationResponse)
@@ -794,18 +840,20 @@ async def list_saved_jobs(
     user: dict = Depends(require_auth),
 ):
     result = await db.execute(
-        select(SavedJob).where(SavedJob.user_id == user["sub"]).order_by(SavedJob.saved_at.desc())
+        select(SavedJob)
+        .options(joinedload(SavedJob.job))
+        .where(SavedJob.user_id == user["sub"])
+        .order_by(SavedJob.saved_at.desc())
     )
-    saved_jobs = result.scalars().all()
-    responses = []
-    for s in saved_jobs:
-        await db.refresh(s, ["job"])
-        responses.append(SavedJobResponse(
+    saved_jobs = result.scalars().unique().all()
+    return [
+        SavedJobResponse(
             id=s.id,
             job=JobResponse.model_validate(s.job),
             saved_at=s.saved_at,
-        ))
-    return responses
+        )
+        for s in saved_jobs
+    ]
 
 
 @app.get("/api/saved-jobs/{job_id}/status")

@@ -1,73 +1,300 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Compass,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Sparkles,
-} from "lucide-react";
-import {
-  Job,
-  SkillGap,
-  ResumeProfile,
-  fetchJobs,
-  fetchDepartments,
-  uploadResume,
-} from "@/lib/api";
-import JobCard from "@/components/JobCard";
-import ResumeUpload from "@/components/ResumeUpload";
-import ProfileBanner from "@/components/ProfileBanner";
+import { X, Sparkles, ArrowRight, Zap, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
+import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
-import LiveIndicator from "@/components/LiveIndicator";
 import { useNotifications } from "@/context/NotificationsContext";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import CompanyLogo from "@/components/CompanyLogo";
 
 const SENIORITY_OPTIONS = [
   { value: "", label: "All Levels" },
-  { value: "intern", label: "Intern" },
-  { value: "junior", label: "Junior" },
-  { value: "mid", label: "Mid" },
-  { value: "senior", label: "Senior" },
-  { value: "lead", label: "Lead" },
+  { value: "intern", label: "Intern (0–1 yr)" },
+  { value: "junior", label: "Junior (1–3 yrs)" },
+  { value: "mid", label: "Mid-Senior (3–6 yrs)" },
+  { value: "senior", label: "Senior (6–10 yrs)" },
+  { value: "lead", label: "Lead / Principal (10+ yrs)" },
   { value: "director", label: "Director" },
   { value: "vp", label: "VP" },
-  { value: "c-suite", label: "C-Suite" },
+  { value: "c-suite", label: "Executive" },
+];
+
+const ROLE_TYPE_FILTERS = [
+  { label: "Engineering", value: "engineering" },
+  { label: "Product Design", value: "design" },
+  { label: "Data Science", value: "data_science" },
+  { label: "Marketing", value: "marketing" },
 ];
 
 function formatDept(d: string) {
   return d.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
 }
 
+function formatSalary(n: number) {
+  return `$${Math.round(n / 1000)}k`;
+}
+
+/* ── FeaturedJobCard ──────────────────────────────────────────── */
+
+function FeaturedJobCard({
+  job, index, isSaved, onBookmark,
+}: {
+  job: Job; index: number; isSaved: boolean; onBookmark: (id: string) => void;
+}) {
+  const isFeatured = index === 1;
+  const score = job.match_score;
+
+  const badge = score != null && (
+    <div className="absolute top-0 right-0 p-4">
+      <div
+        className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+          isFeatured
+            ? "bg-[#0051d5] text-white"
+            : score >= 90
+            ? "bg-[#316bf3] text-white"
+            : "bg-[#0051d5]/10 text-[#0051d5] border border-[#0051d5]/20"
+        }`}
+      >
+        <Zap className="w-3 h-3" />
+        {Math.round(score)}% Match
+      </div>
+    </div>
+  );
+
+  if (isFeatured) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: index * 0.08 }}
+        className="relative bg-neutral-950 text-white p-6 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col"
+      >
+        {badge}
+        <div className="flex items-start gap-4 mb-6">
+          <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
+          <div className="min-w-0 pr-20">
+            <h3 className="font-bold text-lg leading-snug line-clamp-2">{job.title}</h3>
+            <p className="text-white/70 text-xs font-medium mt-0.5">
+              {job.company} • {job.location}
+            </p>
+          </div>
+        </div>
+        <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-6 flex-1">
+          {job.description}
+        </p>
+        <div className="flex gap-2">
+          <Link
+            href={`/jobs/${job.id}`}
+            className="flex-1 bg-white text-black py-2 rounded-lg text-sm font-bold text-center active:scale-95 transition-transform"
+          >
+            Apply Fast
+          </Link>
+          <button
+            onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors shrink-0"
+          >
+            {isSaved
+              ? <BookmarkCheck className="w-4 h-4 text-white" />
+              : <Bookmark className="w-4 h-4 text-white/70" />
+            }
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.08 }}
+      className="relative bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.06)] hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden"
+    >
+      {badge}
+      <div className="flex items-start gap-4 mb-6">
+        <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
+        <div className="min-w-0 pr-20">
+          <h3 className="font-bold text-lg leading-snug text-neutral-950 dark:text-white line-clamp-2">
+            {job.title}
+          </h3>
+          <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium mt-0.5">
+            {job.company} • {job.location}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mb-6 flex-1">
+        {job.salary_range && (
+          <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+            {job.salary_range}
+          </span>
+        )}
+        <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+          {formatDept(job.department)}
+        </span>
+      </div>
+      <div className="flex gap-2">
+        <Link
+          href={`/jobs/${job.id}`}
+          className="flex-1 text-neutral-950 dark:text-white font-bold text-sm flex items-center justify-center gap-1 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+        >
+          View Details <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+        <button
+          onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
+        >
+          {isSaved
+            ? <BookmarkCheck className="w-4 h-4 text-[#0051d5]" />
+            : <Bookmark className="w-4 h-4 text-neutral-400" />
+          }
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── JobListRow ───────────────────────────────────────────────── */
+
+function JobListRow({
+  job, index, isSaved, onBookmark,
+}: {
+  job: Job; index: number; isSaved: boolean; onBookmark: (id: string) => void;
+}) {
+  const score = job.match_score;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-all duration-200 border-b border-neutral-200 dark:border-neutral-800 last:border-0"
+    >
+      <div className="flex gap-4 items-center">
+        <CompanyLogo company={job.company} className="w-10 h-10 rounded-lg shadow-sm text-sm" />
+        <div>
+          <h4 className="font-bold text-base text-neutral-950 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-blue-400 transition-colors">
+            {job.title}
+          </h4>
+          <div className="flex gap-2 text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
+            <span>{job.company}</span>
+            <span>•</span>
+            <span>{job.location}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-4 mt-4 md:mt-0">
+        {score != null && (
+          <div className="flex flex-col items-end">
+            <span className="text-[0.6rem] font-bold text-[#0051d5] uppercase tracking-widest">
+              Match Score
+            </span>
+            <span className="text-sm font-bold text-neutral-950 dark:text-white">
+              {Math.round(score)}%
+            </span>
+          </div>
+        )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onBookmark(job.id); }}
+          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        >
+          {isSaved
+            ? <BookmarkCheck className="w-4 h-4 text-[#0051d5]" />
+            : <Bookmark className="w-4 h-4 text-neutral-400" />
+          }
+        </button>
+        <Link href={`/jobs/${job.id}`}>
+          <button className="bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50 px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-shadow text-neutral-900 dark:text-white">
+            View
+          </button>
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Pagination ───────────────────────────────────────────────── */
+
+function Pagination({
+  page, total, pageSize, onChange,
+}: {
+  page: number; total: number; pageSize: number; onChange: (p: number) => void;
+}) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return null;
+
+  const getPages = (): (number | "…")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (page <= 4) return [1, 2, 3, 4, 5, "…", totalPages];
+    if (page >= totalPages - 3) return [1, "…", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, "…", page - 1, page, page + 1, "…", totalPages];
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1 mt-12">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4 text-neutral-600" />
+      </button>
+
+      {getPages().map((p, i) =>
+        p === "…" ? (
+          <span key={`ellipsis-${i}`} className="px-2 text-sm text-neutral-400 select-none">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(Number(p))}
+            className={`w-9 h-9 rounded-lg text-sm font-black transition-all ${
+              page === p
+                ? "bg-black text-white"
+                : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === Math.ceil(total / pageSize)}
+        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="w-4 h-4 text-neutral-600" />
+      </button>
+    </div>
+  );
+}
+
+/* ── JobsPage ─────────────────────────────────────────────────── */
+
 export default function JobsPage() {
-  const { session } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filters
+  const [salaryMax, setSalaryMax] = useState(300000);
   const [department, setDepartment] = useState("");
   const [seniority, setSeniority] = useState("");
-  const [search, setSearch] = useState("");
-  const [searchDebounce, setSearchDebounce] = useState("");
-
-  // Personalization
-  const [profile, setProfile] = useState<ResumeProfile | null>(null);
-  const [matchedJobs, setMatchedJobs] = useState<Job[] | null>(null);
-  const [skillGaps, setSkillGaps] = useState<Record<string, SkillGap>>({});
   const [newJobAlert, setNewJobAlert] = useState<string | null>(null);
   const { addNotification } = useNotifications();
+  const { session } = useAuth();
+  const router = useRouter();
+  const listRef = useRef<HTMLElement>(null);
+  const PAGE_SIZE = 20;
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
-  const feedStatus = useJobFeed(
+  useJobFeed(
     useCallback(
       (job: Job) => {
         setJobs((prev) => {
@@ -84,77 +311,76 @@ export default function JobsPage() {
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => setSearchDebounce(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  useEffect(() => {
     fetchDepartments().then(setDepartments).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetchSavedJobs(session.access_token)
+      .then((saved) => setSavedIds(new Set(saved.map((s) => s.job.id))))
+      .catch(() => {});
+  }, [session]);
+
+  const handleBookmark = async (jobId: string) => {
+    if (!session?.access_token) {
+      router.push("/auth");
+      return;
+    }
+    if (savedIds.has(jobId)) {
+      router.push("/dashboard");
+      return;
+    }
+    try {
+      await saveJob(jobId, session.access_token);
+      setSavedIds((prev) => new Set([...prev, jobId]));
+      router.push("/dashboard");
+    } catch { /* ignore */ }
+  };
+
   const loadJobs = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await fetchJobs({
         page,
-        page_size: 20,
+        page_size: PAGE_SIZE,
         department: department || undefined,
         seniority: seniority || undefined,
-        search: searchDebounce || undefined,
       });
       setJobs(data.jobs);
       setTotal(data.total);
-      setHasNext(data.has_next);
     } catch {
-      setError("Failed to load jobs. Please check that the API is running.");
+      /* API unavailable — jobs stay empty */
     } finally {
       setLoading(false);
     }
-  }, [page, department, seniority, searchDebounce]);
+  }, [page, department, seniority]);
 
   useEffect(() => {
-    if (!matchedJobs) loadJobs();
-  }, [loadJobs, matchedJobs]);
+    loadJobs();
+  }, [loadJobs]);
 
   useEffect(() => {
-    setPage(1);
-  }, [department, seniority, searchDebounce]);
+    handlePageChange(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [department, seniority]);
 
-  const handleUpload = async (file: File) => {
-    setUploading(true);
-    setError(null);
-    try {
-      const result = await uploadResume(file, session?.access_token);
-      setProfile(result.profile);
-      setMatchedJobs(result.matched_jobs);
-      setSkillGaps(result.skill_gaps ?? {});
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleClearProfile = () => {
-    setProfile(null);
-    setMatchedJobs(null);
-    setSkillGaps({});
-    setPage(1);
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const clearFilters = () => {
     setDepartment("");
     setSeniority("");
-    setSearch("");
+    setSalaryMax(300000);
   };
 
-  const hasFilters = department || seniority || search;
-  const displayedJobs = matchedJobs || jobs;
-  const displayedTotal = matchedJobs ? matchedJobs.length : total;
+  const hasFilters = department || seniority || salaryMax < 300000;
+  const featuredJobs = page === 1 ? jobs.slice(0, 3) : [];
+  const listJobs = page === 1 ? jobs.slice(3) : jobs;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-neutral-950 text-neutral-900 dark:text-white">
       <Header />
 
       {/* Live toast */}
@@ -164,282 +390,312 @@ export default function JobsPage() {
             initial={{ opacity: 0, y: -60 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -60 }}
-            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-full shadow-xl flex items-center gap-2"
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-neutral-950 text-white text-sm font-semibold px-5 py-3 rounded-full shadow-xl flex items-center gap-2"
           >
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-[#0051d5] animate-pulse" />
             {newJobAlert} just posted
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── PAGE HERO ─────────────────────────────────────────────── */}
-      <div className="pt-16 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-          <AnimatePresence mode="wait">
-            {!profile ? (
-              <motion.div
-                key="hero"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8"
-              >
-                {/* Left headline */}
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 shadow-sm">
-                    <Compass className="w-3.5 h-3.5 text-orange-500" />
-                    <span>
-                      Path<span className="text-orange-500 font-bold">AI</span> — Live Job Feed
-                    </span>
-                    <LiveIndicator status={feedStatus} />
-                  </div>
-                  <h1 className="text-5xl sm:text-6xl font-black tracking-tight text-gray-900 dark:text-white leading-[0.95]">
-                    Find Your<br />
-                    <span className="text-orange-500">Next Role</span>
-                  </h1>
-                  <p className="text-lg text-gray-500 dark:text-gray-400 max-w-md">
-                    {total > 0
-                      ? `${total} open positions — or upload your resume for AI-matched results.`
-                      : "Upload your resume for personalized AI-matched recommendations."}
-                  </p>
-                </div>
+      {/* Two-column layout */}
+      <main className="pt-24 pb-16 px-6 md:px-12 max-w-[1440px] mx-auto flex flex-col md:flex-row gap-12">
 
-                {/* Right: Resume upload */}
-                <div className="lg:flex-shrink-0">
-                  <ResumeUpload onUpload={handleUpload} isUploading={uploading} />
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="profile"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-              >
-                <ProfileBanner profile={profile} onClear={handleClearProfile} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+        {/* ── SIDEBAR ── */}
+        <aside className="w-full md:w-72 flex-shrink-0 space-y-10">
 
-          {/* ── SEARCH + FILTER BAR ──────────────────────────────── */}
-          {!matchedJobs && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.15 }}
-              className="mt-8 flex flex-col sm:flex-row gap-3"
-            >
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search jobs, companies, skills…"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-gray-900 dark:focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-gray-400/10 transition-all shadow-sm"
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+          {/* Discovery Filters */}
+          <div>
+            <h3 className="text-xs uppercase tracking-[0.1em] font-bold text-neutral-500 dark:text-neutral-400 mb-6">
+              Discovery Filters
+            </h3>
+            <div className="space-y-8">
+
+              {/* Industry */}
+              <div>
+                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                  Industry
+                </label>
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full bg-transparent border-0 border-b-2 border-neutral-200 dark:border-neutral-700 focus:border-[#0051d5] focus:ring-0 text-sm py-2 text-neutral-900 dark:text-white transition-colors cursor-pointer"
+                >
+                  <option value="">All Industries</option>
+                  {departments.map((d) => (
+                    <option key={d} value={d}>{formatDept(d)}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Department pill select */}
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-gray-900 dark:focus:border-gray-400 shadow-sm appearance-none cursor-pointer min-w-[160px]"
-              >
-                <option value="">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>{formatDept(d)}</option>
-                ))}
-              </select>
+              {/* Role Type */}
+              <div>
+                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                  Role Type
+                </label>
+                <div className="space-y-2.5">
+                  {ROLE_TYPE_FILTERS.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={department === opt.value}
+                        onChange={() =>
+                          setDepartment(department === opt.value ? "" : opt.value)
+                        }
+                        className="rounded-sm border-neutral-400 text-neutral-900 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-              {/* Seniority pill select */}
-              <select
-                value={seniority}
-                onChange={(e) => setSeniority(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-gray-900 dark:focus:border-gray-400 shadow-sm appearance-none cursor-pointer min-w-[140px]"
-              >
-                {SENIORITY_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+              {/* Salary Range */}
+              <div>
+                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                  Salary Range (USD)
+                </label>
+                <input
+                  type="range"
+                  min={50000}
+                  max={300000}
+                  step={10000}
+                  value={salaryMax}
+                  onChange={(e) => setSalaryMax(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-neutral-900 dark:accent-white"
+                />
+                <div className="flex justify-between mt-2 text-[0.7rem] font-medium text-neutral-500 dark:text-neutral-400">
+                  <span>$50k</span>
+                  <span className="text-neutral-900 dark:text-white font-bold">
+                    {salaryMax >= 300000 ? "$300k+" : formatSalary(salaryMax)}
+                  </span>
+                  <span>$300k+</span>
+                </div>
+              </div>
 
-              {/* Clear filters */}
+              {/* Experience */}
+              <div>
+                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                  Experience
+                </label>
+                <select
+                  value={seniority}
+                  onChange={(e) => setSeniority(e.target.value)}
+                  className="w-full bg-transparent border-0 border-b-2 border-neutral-200 dark:border-neutral-700 focus:border-[#0051d5] focus:ring-0 text-sm py-2 text-neutral-900 dark:text-white transition-colors cursor-pointer"
+                >
+                  {SENIORITY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+
               <AnimatePresence>
                 {hasFilters && (
                   <motion.button
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
                     onClick={clearFilters}
-                    className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
-                    Clear
+                    <X className="w-3 h-3" />
+                    Clear all filters
                   </motion.button>
                 )}
               </AnimatePresence>
-            </motion.div>
-          )}
-        </div>
-      </div>
-
-      {/* ── ERROR ────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="max-w-7xl mx-auto px-4 sm:px-6 mt-4"
-          >
-            <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-              {error}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
 
-      {/* ── JOB LIST ─────────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+          {/* AI Insight Widget */}
+          <div className="bg-neutral-950 dark:bg-neutral-900 p-6 rounded-xl text-white">
+            <div className="w-8 h-8 bg-[#0051d5]/20 rounded-lg flex items-center justify-center mb-4">
+              <Sparkles className="w-4 h-4 text-[#316bf3]" />
+            </div>
+            <p className="text-sm leading-relaxed font-medium text-white/80">
+              PathAI has indexed{" "}
+              <span className="text-white font-bold">
+                {total > 0 ? `${total} jobs` : "thousands of jobs"}
+              </span>{" "}
+              today.{" "}
+              {total > 0 ? (
+                session?.access_token ? (
+                  <>
+                    Open any job to see your{" "}
+                    <span className="text-[#b4c5ff]">personalized match score</span>.
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[#b4c5ff]">Sign in</span> and upload your resume to unlock match scores.
+                  </>
+                )
+              ) : (
+                <span className="text-white/50">Connecting to live feed…</span>
+              )}
+            </p>
+          </div>
+        </aside>
 
-        {/* Count row */}
-        <motion.div
-          layout
-          className="flex items-center justify-between mb-6"
-        >
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            {matchedJobs ? (
-              <span className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-orange-500" />
-                <span>
-                  <strong className="text-gray-900 dark:text-white">{displayedTotal}</strong> AI-matched positions
-                </span>
-              </span>
-            ) : (
-              <span>
-                <strong className="text-gray-900 dark:text-white">{displayedTotal}</strong> positions
-              </span>
-            )}
-          </p>
-        </motion.div>
+        {/* ── MAIN CONTENT ── */}
+        <section ref={listRef} className="flex-1 min-w-0 scroll-mt-28">
 
-        {/* Grid / list */}
-        {loading && !matchedJobs ? (
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 pt-5 pb-4 animate-pulse">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-lg w-2/3" />
-                    <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-lg w-1/3" />
-                    <div className="flex gap-2 pt-1">
-                      <div className="h-5 w-20 bg-gray-100 dark:bg-gray-700 rounded-lg" />
-                      <div className="h-5 w-16 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+          {loading ? (
+            /* Skeleton */
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`p-6 rounded-xl animate-pulse ${
+                      i === 1
+                        ? "bg-neutral-800"
+                        : "bg-white dark:bg-neutral-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-neutral-200 dark:bg-neutral-700 shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-3/4" />
+                        <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-1/2" />
+                      </div>
+                    </div>
+                    <div className="h-9 bg-neutral-200 dark:bg-neutral-700 rounded-lg" />
+                  </div>
+                ))}
+              </div>
+              <div>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between items-center p-4 border-b border-neutral-200 dark:border-neutral-800 animate-pulse"
+                  >
+                    <div className="flex gap-4 items-center">
+                      <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800" />
+                      <div className="space-y-2">
+                        <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-44" />
+                        <div className="h-3 bg-neutral-100 dark:bg-neutral-800 rounded w-28" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="h-8 w-12 bg-neutral-100 dark:bg-neutral-800 rounded" />
+                      <div className="h-8 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
                     </div>
                   </div>
-                </div>
-                <div className="mt-4 flex gap-5">
-                  <div className="h-3 w-24 bg-gray-100 dark:bg-gray-700 rounded" />
-                  <div className="h-3 w-20 bg-gray-100 dark:bg-gray-700 rounded" />
-                  <div className="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded" />
-                </div>
-                <div className="mt-3 space-y-2">
-                  <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-full" />
-                  <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded w-5/6" />
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : displayedJobs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-32 gap-3"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-              <Search className="w-7 h-7 text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-lg font-bold text-gray-900 dark:text-white">No positions found</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500">Try adjusting your search or filters</p>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="mt-2 text-sm font-medium text-orange-500 hover:underline"
-              >
-                Clear all filters
-              </button>
-            )}
-          </motion.div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {displayedJobs.map((job, i) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  index={i}
-                  skillGap={skillGaps[job.id]}
-                />
-              ))}
-            </div>
+          ) : jobs.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-32 gap-3"
+            >
+              <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl">
+                🔍
+              </div>
+              <p className="text-lg font-bold">No positions found</p>
+              <p className="text-sm text-neutral-400">Try adjusting your filters</p>
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-2 text-sm font-semibold text-[#0051d5] hover:underline underline-offset-4"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </motion.div>
+          ) : (
+            <>
+              {/* Immediate Matches — top 3 bento grid */}
+              {featuredJobs.length > 0 && (
+                <div className="mb-16">
+                  <div className="flex justify-between items-end mb-8">
+                    <div>
+                      <span className="text-[0.75rem] font-bold text-[#0051d5] uppercase tracking-[0.1em] mb-2 block">
+                        Prioritized For You
+                      </span>
+                      <h2 className="text-3xl font-extrabold tracking-tighter text-neutral-950 dark:text-white">
+                        Immediate Matches
+                      </h2>
+                    </div>
+                    <a
+                      href="#recent"
+                      className="text-[#0051d5] dark:text-blue-400 font-semibold text-sm hover:underline underline-offset-4 hidden sm:block"
+                    >
+                      Browse All Matches
+                    </a>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {featuredJobs.map((job, i) => (
+                      <FeaturedJobCard
+                        key={job.id}
+                        job={job}
+                        index={i}
+                        isSaved={savedIds.has(job.id)}
+                        onBookmark={handleBookmark}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {/* Pagination */}
-            {!matchedJobs && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mt-10 flex items-center justify-center gap-3"
-              >
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  disabled={page === 1}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </motion.button>
-                <span className="px-4 py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold min-w-[2.5rem] text-center">
-                  {page}
-                </span>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPage((p) => p + 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  disabled={!hasNext}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </motion.button>
-              </motion.div>
-            )}
-          </>
-        )}
+              {/* Recent Openings — simple list */}
+              {listJobs.length > 0 && (
+                <section id="recent">
+                  <div className="flex items-center gap-4 mb-8">
+                    <h2 className="text-2xl font-extrabold tracking-tighter text-neutral-950 dark:text-white whitespace-nowrap">
+                      Recent Openings
+                    </h2>
+                    <div className="h-[2px] flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                  </div>
+                  <div>
+                    {listJobs.map((job, i) => (
+                      <JobListRow
+                        key={job.id}
+                        job={job}
+                        index={i}
+                        isSaved={savedIds.has(job.id)}
+                        onBookmark={handleBookmark}
+                      />
+                    ))}
+                  </div>
+
+                  <Pagination
+                    page={page}
+                    total={total}
+                    pageSize={PAGE_SIZE}
+                    onChange={handlePageChange}
+                  />
+                </section>
+              )}
+            </>
+          )}
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex items-center justify-center gap-2">
-          <Compass className="w-4 h-4 text-orange-500" />
-          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            Path<span className="text-orange-500">AI</span>
-          </span>
-          <span className="text-sm text-gray-400 dark:text-gray-500">— AI-powered job matching</span>
+      <footer className="bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 max-w-[1440px] mx-auto gap-8">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <span className="text-lg font-black text-neutral-950 dark:text-white uppercase tracking-tighter">
+              PathAI
+            </span>
+            <p className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-600">
+              © 2026 PathAI. The Intelligent Curator.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-8">
+            {["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact"].map((link) => (
+              <a
+                key={link}
+                href="#"
+                className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-600 hover:text-neutral-950 dark:hover:text-neutral-100 transition-colors opacity-70 hover:opacity-100 duration-300"
+              >
+                {link}
+              </a>
+            ))}
+          </div>
         </div>
       </footer>
     </div>

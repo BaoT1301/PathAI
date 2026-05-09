@@ -1,7 +1,41 @@
 from datetime import datetime
 from uuid import UUID
 from typing import Optional
+from enum import Enum
 from pydantic import BaseModel
+
+
+class DepartmentEnum(str, Enum):
+    engineering = "engineering"
+    data_science = "data_science"
+    product = "product"
+    design = "design"
+    marketing = "marketing"
+    sales = "sales"
+    finance = "finance"
+    hr = "hr"
+    healthcare = "healthcare"
+    operations = "operations"
+
+
+class SeniorityEnum(str, Enum):
+    intern = "intern"
+    junior = "junior"
+    mid = "mid"
+    senior = "senior"
+    lead = "lead"
+    director = "director"
+    vp = "vp"
+    c_suite = "c-suite"
+
+
+class JobCreateRequest(BaseModel):
+    title: str
+    description: str
+    location: str
+    department: DepartmentEnum
+    seniority: SeniorityEnum
+    salary_range: str
 
 
 class JobResponse(BaseModel):
@@ -48,6 +82,7 @@ class ResumeUploadResponse(BaseModel):
     profile: ResumeProfile
     matched_jobs: list[JobResponse]
     skill_gaps: dict[str, SkillGap] = {}  # keyed by job_id string
+    seniority_relaxed: bool = False  # True when seniority filter was dropped due to low results
 
 
 # --- Interview Coach schemas ---

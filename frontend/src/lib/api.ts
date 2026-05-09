@@ -1,5 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+
 async function authedFetch(url: string, token: string, options: RequestInit = {}) {
   const res = await fetch(url, {
     ...options,
@@ -149,6 +150,19 @@ export async function deleteApplication(id: string, token: string): Promise<void
   await authedFetch(`${API_URL}/api/applications/${id}`, token, { method: "DELETE" });
 }
 
+export async function getJobMatchScore(
+  jobId: string,
+  token: string
+): Promise<{ match_score: number; job_id: string } | null> {
+  try {
+    const res = await authedFetch(`${API_URL}/api/jobs/${jobId}/match-score`, token);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getApplicationStatus(
   jobId: string,
   token?: string
@@ -242,6 +256,17 @@ export async function fetchSavedJobs(token: string): Promise<SavedJob[]> {
 export interface SavedResume {
   resume_summary: string;
   updated_at: string;
+}
+
+export async function getSavedJobStatus(
+  jobId: string,
+  token?: string
+): Promise<{ saved: boolean }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}/api/saved-jobs/${jobId}/status`, { headers });
+  if (!res.ok) return { saved: false };
+  return res.json();
 }
 
 export async function fetchSavedResume(token: string): Promise<SavedResume | null> {

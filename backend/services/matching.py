@@ -62,7 +62,7 @@ async def get_matched_jobs(
     profile: ResumeProfile,
     page: int = 1,
     page_size: int = 40,
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, bool]:
     acceptable_seniority = SENIORITY_MATCH.get(profile.seniority, list(SENIORITY_MATCH.keys()))
     acceptable_depts = DOMAIN_TO_DEPTS.get(profile.domain)  # None = no domain filter
 
@@ -88,10 +88,12 @@ async def get_matched_jobs(
     total_result = await db.execute(_build_count(acceptable_seniority, acceptable_depts))
     total = total_result.scalar()
     active_seniority: list[str] | None = acceptable_seniority
+    seniority_relaxed = False
     if total < 20:
         total_result = await db.execute(_build_count(None, acceptable_depts))
         total = total_result.scalar()
         active_seniority = None
+        seniority_relaxed = True
 
     query = _build_query(active_seniority, acceptable_depts).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
@@ -119,4 +121,4 @@ async def get_matched_jobs(
         }
         jobs.append(job_dict)
 
-    return jobs, total
+    return jobs, total, seniority_relaxed
