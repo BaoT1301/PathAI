@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 from sqlalchemy import text
 from database import engine, async_session, Base
 from models import Job
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, OPENAI_MODEL
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -183,7 +183,7 @@ def generate_title(base_title: str, seniority: str) -> str:
 
 async def generate_description(title: str, department: str, seniority: str) -> str:
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[
             {
                 "role": "system",

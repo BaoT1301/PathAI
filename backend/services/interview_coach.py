@@ -1,6 +1,6 @@
 import json
 from openai import AsyncOpenAI
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, OPENAI_MODEL
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -19,7 +19,7 @@ async def generate_interview_prep(
         context += f"\n\nCandidate Summary: {resume_summary}"
 
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         response_format={"type": "json_object"},
         messages=[
             {

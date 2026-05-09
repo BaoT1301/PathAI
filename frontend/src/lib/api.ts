@@ -244,6 +244,17 @@ export interface SavedResume {
   updated_at: string;
 }
 
+export async function getSavedJobStatus(
+  jobId: string,
+  token?: string
+): Promise<{ saved: boolean }> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}/api/saved-jobs/${jobId}/status`, { headers });
+  if (!res.ok) return { saved: false };
+  return res.json();
+}
+
 export async function fetchSavedResume(token: string): Promise<SavedResume | null> {
   const res = await authedFetch(`${API_URL}/api/me/resume`, token);
   if (res.status === 404) return null;

@@ -1,6 +1,6 @@
 import json
 from openai import AsyncOpenAI
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, OPENAI_MODEL
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -14,7 +14,7 @@ async def analyze_skill_gap(
     Returns matching_skills, missing_skills, gap_score (0-1, lower = bigger gap).
     """
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         response_format={"type": "json_object"},
         messages=[
             {

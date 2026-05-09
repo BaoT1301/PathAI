@@ -5,30 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
-  MapPin, DollarSign, Clock, Building2, ExternalLink, Users, ChevronLeft,
-  GraduationCap, Loader2, CheckCircle2, Briefcase, FileText, Bookmark,
-  BookmarkCheck, Zap,
+  MapPin, DollarSign, Building2, ChevronLeft,
+  Loader2, CheckCircle2, Zap, Clock,
+  Bookmark, BookmarkCheck, Share2, ExternalLink,
 } from "lucide-react";
-import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob } from "@/lib/api";
+import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import SalaryInsights from "@/components/SalaryInsights";
 import InterviewCoach from "@/components/InterviewCoach";
 import CoverLetter from "@/components/CoverLetter";
 import Header from "@/components/Header";
-
-const DEPT_STYLES: Record<string, { bg: string; text: string; border: string; from: string; darkFrom: string }> = {
-  engineering:  { bg: "bg-violet-50 dark:bg-violet-900/30",  text: "text-violet-700 dark:text-violet-300",  border: "border-violet-200 dark:border-violet-700",  from: "from-violet-50/60",  darkFrom: "dark:from-violet-950/40"  },
-  data_science: { bg: "bg-indigo-50 dark:bg-indigo-900/30",  text: "text-indigo-700 dark:text-indigo-300",  border: "border-indigo-200 dark:border-indigo-700",  from: "from-indigo-50/60",  darkFrom: "dark:from-indigo-950/40"  },
-  product:      { bg: "bg-sky-50 dark:bg-sky-900/30",        text: "text-sky-700 dark:text-sky-300",        border: "border-sky-200 dark:border-sky-700",        from: "from-sky-50/60",     darkFrom: "dark:from-sky-950/40"     },
-  design:       { bg: "bg-pink-50 dark:bg-pink-900/30",      text: "text-pink-700 dark:text-pink-300",      border: "border-pink-200 dark:border-pink-700",      from: "from-pink-50/60",    darkFrom: "dark:from-pink-950/40"    },
-  marketing:    { bg: "bg-orange-50 dark:bg-orange-900/30",  text: "text-orange-700 dark:text-orange-300",  border: "border-orange-200 dark:border-orange-700",  from: "from-orange-50/60",  darkFrom: "dark:from-orange-950/40"  },
-  sales:        { bg: "bg-teal-50 dark:bg-teal-900/30",      text: "text-teal-700 dark:text-teal-300",      border: "border-teal-200 dark:border-teal-700",      from: "from-teal-50/60",    darkFrom: "dark:from-teal-950/40"    },
-  finance:      { bg: "bg-emerald-50 dark:bg-emerald-900/30", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200 dark:border-emerald-700", from: "from-emerald-50/60", darkFrom: "dark:from-emerald-950/40" },
-  hr:           { bg: "bg-rose-50 dark:bg-rose-900/30",      text: "text-rose-700 dark:text-rose-300",      border: "border-rose-200 dark:border-rose-700",      from: "from-rose-50/60",    darkFrom: "dark:from-rose-950/40"    },
-  operations:   { bg: "bg-slate-50 dark:bg-slate-900/30",    text: "text-slate-700 dark:text-slate-300",    border: "border-slate-200 dark:border-slate-700",    from: "from-slate-50/60",   darkFrom: "dark:from-slate-950/40"   },
-  healthcare:   { bg: "bg-red-50 dark:bg-red-900/30",        text: "text-red-700 dark:text-red-300",        border: "border-red-200 dark:border-red-700",        from: "from-red-50/60",     darkFrom: "dark:from-red-950/40"     },
-};
-const DEPT_DEFAULT = { bg: "bg-gray-50 dark:bg-gray-700", text: "text-gray-700 dark:text-gray-200", border: "border-gray-200 dark:border-gray-600", from: "from-gray-50/60", darkFrom: "dark:from-gray-950/40" };
+import Link from "next/link";
 
 function formatDept(d: string) {
   return d.split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
@@ -44,6 +30,11 @@ function timeAgo(dateStr: string) {
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
   return `${Math.floor(days / 30)}mo ago`;
 }
+
+const SIMILAR_JOBS = [
+  { initial: "V", title: "Product Designer", company: "Vercel", salary: "$160k+" },
+  { initial: "R", title: "Staff Designer", company: "Ramp", salary: "$200k+" },
+];
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +63,9 @@ export default function JobDetailPage() {
     if (!id || !session?.access_token) return;
     getApplicationStatus(id, session.access_token).then((s) => {
       if (s.status) setAppStatus(s.status);
+    });
+    getSavedJobStatus(id, session.access_token).then((s) => {
+      setSaved(s.saved);
     });
   }, [id, session]);
 
@@ -108,12 +102,12 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
-            <p className="text-sm text-gray-400 dark:text-gray-500">Loading job…</p>
+            <Loader2 className="w-7 h-7 animate-spin text-[#0051d5]" />
+            <p className="text-sm text-[#45474b]">Loading job…</p>
           </div>
         </div>
       </div>
@@ -122,286 +116,343 @@ export default function JobDetailPage() {
 
   if (!job) return null;
 
-  const dept = DEPT_STYLES[job.department] || DEPT_DEFAULT;
   const isApplied = appStatus !== null;
+  const companyInitial = job.company?.[0]?.toUpperCase() ?? "?";
+  const matchScore = job.match_score != null ? Math.round(job.match_score) : null;
+  const matchLabel =
+    matchScore == null ? "Upload Resume"
+    : matchScore >= 80 ? "Strong Match"
+    : matchScore >= 60 ? "Good Match"
+    : "Partial Match";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800">
+    <div className="min-h-screen bg-[#f8f9fa] text-[#191c1d] antialiased">
       <Header />
 
-      {/* ── Hero Header ─────────────────────────────────────────── */}
-      <div className={`bg-gradient-to-b ${dept.from} ${dept.darkFrom} to-white dark:to-gray-800 border-b border-gray-100 dark:border-gray-700`}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-0">
-          {/* Back button */}
-          <motion.button
+      <main className="pt-24 pb-32 px-6 md:px-12 max-w-[1440px] mx-auto">
+
+        {/* Breadcrumb */}
+        <div className="mb-8 flex items-center gap-2">
+          <button
             onClick={() => router.back()}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="mb-6 flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors group"
+            className="flex items-center gap-2 text-[#45474b] hover:text-black transition-colors text-sm font-medium"
           >
-            <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            Back to jobs
-          </motion.button>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.05 }}
-          >
-            {/* Chips row */}
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className={`inline-flex items-center rounded-xl px-3 py-1 text-xs font-bold border ${dept.bg} ${dept.text} ${dept.border}`}>
-                {formatDept(job.department)}
-              </span>
-              <span className="inline-flex items-center rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1 text-xs font-bold text-gray-600 dark:text-gray-300">
-                {formatSeniority(job.seniority)}
-              </span>
-              {job.source === "adzuna" && (
-                <span className="inline-flex items-center gap-1 rounded-xl border border-blue-100 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-300">
-                  <Zap className="w-3 h-3" /> Adzuna
-                </span>
-              )}
-              {job.match_score != null && (
-                <span className={`inline-flex items-center rounded-xl px-3 py-1 text-xs font-bold ${
-                  job.match_score >= 75 ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" :
-                  job.match_score >= 50 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" :
-                  "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                }`}>
-                  {Math.round(job.match_score)}% match
-                </span>
-              )}
-            </div>
-
-            {/* Title */}
-            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white leading-tight mb-3">
-              {job.title}
-            </h1>
-
-            {/* Company */}
-            {job.company && (
-              <p className="flex items-center gap-2 text-lg text-gray-500 dark:text-gray-400 font-medium mb-5">
-                <Building2 className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                {job.company}
-              </p>
-            )}
-
-            {/* Meta pills */}
-            <div className="flex flex-wrap items-center gap-2 pb-6 text-sm">
-              <span className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-gray-500 dark:text-gray-400">
-                <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                {job.location}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 font-semibold text-gray-700 dark:text-gray-200">
-                <DollarSign className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                {job.salary_range}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-gray-500 dark:text-gray-400">
-                <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                Posted {timeAgo(job.posted_date)}
-              </span>
-              <span className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-gray-500 dark:text-gray-400">
-                <Users className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
-                {job.applicant_count === 0 ? "Be first to apply" : `${job.applicant_count} applicants`}
-              </span>
-            </div>
-          </motion.div>
+            <ChevronLeft className="w-4 h-4" />
+            Back to Search
+          </button>
         </div>
-      </div>
 
-      {/* ── Body ────────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-          {/* ── Main content ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.1 }}
-            className="flex-1 min-w-0 space-y-5"
-          >
-            {/* Salary Insights */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-              <SalaryInsights jobId={job.id} />
+          {/* ── Main Content (8 cols) ── */}
+          <div className="lg:col-span-8 space-y-12">
+
+            {/* Job Header Card */}
+            <section className="bg-white p-8 md:p-10 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.04)]">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                <div className="flex gap-6 items-start">
+                  <div className="w-16 h-16 rounded-xl bg-[#edeeef] flex items-center justify-center shrink-0 text-xl font-bold text-[#45474b]">
+                    {companyInitial}
+                  </div>
+                  <div>
+                    <h1 className="text-4xl font-bold tracking-tight text-black mb-2">
+                      {job.title}
+                    </h1>
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-[#45474b] font-medium">
+                      {job.company && (
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="w-5 h-5" />
+                          {job.company}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-5 h-5" />
+                        {job.location}
+                      </span>
+                      {job.salary_range && (
+                        <span className="flex items-center gap-1.5">
+                          <DollarSign className="w-5 h-5" />
+                          {job.salary_range}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bookmark + Share */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <motion.button
+                    onClick={handleBookmark}
+                    disabled={savingBookmark}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={justSaved ? { scale: [1, 1.15, 0.95, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.35 }}
+                    className="p-3 rounded-full hover:bg-[#edeeef] transition-colors"
+                  >
+                    {saved
+                      ? <BookmarkCheck className="w-5 h-5 text-[#0051d5]" />
+                      : <Bookmark className="w-5 h-5 text-[#45474b]" />
+                    }
+                  </motion.button>
+                  <button className="p-3 rounded-full hover:bg-[#edeeef] transition-colors">
+                    <Share2 className="w-5 h-5 text-[#45474b]" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tag pills */}
+              <div className="mt-8 pt-8 border-t border-[#c6c6cb]/20 flex flex-wrap gap-3">
+                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+                  Full-time
+                </span>
+                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+                  {formatDept(job.department)}
+                </span>
+                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+                  {formatSeniority(job.seniority)}
+                </span>
+                {matchScore != null && (
+                  <span className="px-4 py-1.5 bg-[#0051d5]/10 text-[#0051d5] text-xs font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
+                    <Zap className="w-3 h-3" />
+                    {matchScore}% Match
+                  </span>
+                )}
+              </div>
+            </section>
+
+            {/* Job Description */}
+            <section className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-black mb-6">About the Role</h2>
+                <div
+                  className="text-[#45474b] leading-relaxed space-y-6 text-lg
+                    [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2
+                    [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2
+                    [&_li]:text-[#45474b]
+                    [&_p]:mb-4 [&_p]:leading-relaxed
+                    [&_strong]:font-semibold [&_strong]:text-black
+                    [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-black [&_h2]:mt-8 [&_h2]:mb-4
+                    [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-black [&_h3]:mt-6 [&_h3]:mb-3"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.description) }}
+                />
+                {job.external_url && (
+                  <a
+                    href={job.external_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#c6c6cb] text-sm font-semibold text-[#45474b] hover:border-[#0051d5] hover:text-[#0051d5] transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Read full description
+                  </a>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* ── Right Sidebar (4 cols, sticky) ── */}
+          <aside className="lg:col-span-4 space-y-8 lg:sticky lg:top-28">
+
+            {/* AI Match Analysis Widget */}
+            <div
+              className="p-8 rounded-xl text-white shadow-lg overflow-hidden relative"
+              style={{ background: "linear-gradient(15deg, #0051d5 0%, #316bf3 100%)" }}
+            >
+              <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-lg">AI Match Analysis</h3>
+                  <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold tracking-widest uppercase">
+                    Verified
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 mb-8">
+                  <span className="text-5xl font-black tracking-tighter">
+                    {matchScore != null ? `${matchScore}%` : "—"}
+                  </span>
+                  <span className="text-white/80 font-medium">{matchLabel}</span>
+                </div>
+                <div className="space-y-4 mb-8">
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                      <Zap className="w-4 h-4" /> Skill Alignment
+                    </p>
+                    <p className="text-xs text-white/70">
+                      Your expertise matches the required skills for this role.
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white/10 rounded-xl">
+                    <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Career Path
+                    </p>
+                    <p className="text-xs text-white/70">
+                      Your background aligns with this company's vertical.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/resume"
+                  className="block w-full bg-white text-[#0051d5] py-3 rounded-xl font-bold text-sm text-center hover:bg-[#dbe1ff] transition-colors"
+                >
+                  Improve Match Rate
+                </Link>
+              </div>
             </div>
 
-            {/* Description */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2.5 pb-4 border-b border-gray-100 dark:border-gray-700">
-                <div className="w-7 h-7 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-4 h-4 text-orange-500" />
+            {/* Company Overview Card */}
+            <div className="bg-[#f3f4f5] p-8 rounded-xl border border-[#c6c6cb]/10">
+              <h3 className="font-bold text-lg mb-6">
+                About {job.company || "this company"}
+              </h3>
+              <p className="text-[#45474b] text-sm leading-relaxed mb-6">
+                {job.company} is hiring for {formatDept(job.department)} talent.
+                This role was posted {timeAgo(job.posted_date)}.
+                {job.applicant_count > 0 && ` ${job.applicant_count} candidates have applied.`}
+              </p>
+              <div className="space-y-4">
+                {job.location && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#45474b] font-medium">Location</span>
+                    <span className="font-semibold text-[#191c1d]">{job.location}</span>
+                  </div>
+                )}
+                {job.salary_range && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#45474b] font-medium">Salary</span>
+                    <span className="font-semibold text-[#191c1d]">{job.salary_range}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#45474b] font-medium">Department</span>
+                  <span className="font-semibold text-[#191c1d]">{formatDept(job.department)}</span>
                 </div>
-                Job Description
-              </h2>
-              <div
-                className="prose prose-sm max-w-none text-gray-700 dark:text-gray-200 leading-relaxed
-                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1
-                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1
-                  [&_li]:text-gray-600 dark:[&_li]:text-gray-300
-                  [&_p]:mb-3 [&_p]:leading-relaxed
-                  [&_strong]:font-semibold [&_strong]:text-gray-900 dark:[&_strong]:text-white
-                  [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-gray-900 dark:[&_h2]:text-white [&_h2]:mt-6 [&_h2]:mb-2
-                  [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-gray-800 dark:[&_h3]:text-gray-100 [&_h3]:mt-4 [&_h3]:mb-1.5"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.description) }}
-              />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[#45474b] font-medium">Level</span>
+                  <span className="font-semibold text-[#191c1d]">{formatSeniority(job.seniority)}</span>
+                </div>
+              </div>
               {job.external_url && (
                 <a
                   href={job.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-600 transition-all"
+                  className="w-full mt-8 py-3 rounded-xl border border-[#c6c6cb] text-sm font-bold text-[#45474b] hover:bg-[#edeeef] transition-colors flex items-center justify-center gap-2"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  Read full description on Adzuna
+                  View Original Posting
                 </a>
               )}
             </div>
-          </motion.div>
 
-          {/* ── Sidebar ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.15 }}
-            className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 space-y-4"
-          >
-            {/* Action card */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-2.5">
-              {user ? (
-                <>
-                  {/* Apply */}
-                  {job.source === "adzuna" && job.external_url ? (
-                    <a
-                      href={job.external_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Apply on Adzuna
-                    </a>
-                  ) : isApplied ? (
-                    <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-sm font-bold">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Applied
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleApply}
-                      disabled={applying}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-60"
-                    >
-                      {applying ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <><Briefcase className="w-4 h-4" /> Quick Apply</>
-                      )}
-                    </button>
-                  )}
-
-                  {/* Interview Prep */}
-                  <button
-                    onClick={() => setShowCoach(true)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-400 hover:text-orange-600 transition-all"
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    Prep Interview
-                  </button>
-
-                  {/* Cover Letter */}
-                  <button
-                    onClick={() => setShowCoverLetter(true)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:border-orange-400 hover:text-orange-600 transition-all"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Generate Cover Letter
-                  </button>
-
-                  {/* Save */}
-                  <motion.button
-                    onClick={handleBookmark}
-                    disabled={savingBookmark}
-                    animate={justSaved ? { scale: [1, 1.05, 0.97, 1.02, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-                      saved
-                        ? "border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
-                        : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-orange-300 dark:hover:border-orange-600 hover:text-orange-500 dark:hover:text-orange-400"
-                    }`}
-                  >
-                    <AnimatePresence mode="wait" initial={false}>
-                      {saved ? (
-                        <motion.span
-                          key="saved"
-                          initial={{ scale: 0, rotate: -15 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          exit={{ scale: 0 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                          className="flex items-center gap-2"
-                        >
-                          <BookmarkCheck className="w-4 h-4" /> Saved
-                        </motion.span>
-                      ) : (
-                        <motion.span
-                          key="unsaved"
-                          initial={{ scale: 0.8 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                          className="flex items-center gap-2"
-                        >
-                          <Bookmark className="w-4 h-4" /> Save Job
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </motion.button>
-                </>
-              ) : (
-                <>
-                  <a
-                    href="/auth"
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
-                  >
-                    Sign in to Apply
-                  </a>
-                  <p className="text-xs text-center text-gray-400 dark:text-gray-500">
-                    Sign in to apply, save jobs, and get interview prep
-                  </p>
-                </>
-              )}
-            </div>
-
-            {/* Details card */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
-                Job Details
-              </h3>
+            {/* Similar Opportunities */}
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg px-2">Similar Opportunities</h3>
               <div className="space-y-3">
-                {[
-                  { icon: MapPin, label: "Location", value: job.location },
-                  { icon: DollarSign, label: "Salary", value: job.salary_range },
-                  { icon: Clock, label: "Posted", value: timeAgo(job.posted_date) },
-                  {
-                    icon: Users,
-                    label: "Applicants",
-                    value: job.applicant_count === 0 ? "Be first to apply" : `${job.applicant_count} applied`,
-                  },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                      <Icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wide leading-none mb-0.5">
-                        {label}
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-200 font-medium truncate">{value}</p>
+                {SIMILAR_JOBS.map((sj) => (
+                  <div
+                    key={sj.title + sj.company}
+                    className="p-4 bg-white hover:bg-[#f3f4f5] rounded-xl transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center font-bold text-xs text-neutral-600 shrink-0">
+                        {sj.initial}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold group-hover:text-[#0051d5] transition-colors">
+                          {sj.title}
+                        </h4>
+                        <p className="text-[10px] text-[#45474b] uppercase tracking-widest font-bold">
+                          {sj.company} • {sj.salary}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </motion.div>
+          </aside>
+        </div>
+      </main>
+
+      {/* ── Quick Apply Sticky Bar ── */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-[#c6c6cb]/10 z-40">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 py-5 flex items-center justify-between">
+          <div className="hidden md:block">
+            <p className="font-bold text-black">{job.title}</p>
+            <p className="text-xs text-[#45474b] font-medium uppercase tracking-widest">
+              Applying with AI-Optimized Resume
+            </p>
+          </div>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <motion.button
+              onClick={handleBookmark}
+              disabled={savingBookmark}
+              whileTap={{ scale: 0.96 }}
+              className="flex-1 md:flex-none px-8 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
+            >
+              {saved ? "Saved ✓" : "Save Job"}
+            </motion.button>
+
+            {user ? (
+              job.source === "adzuna" && job.external_url ? (
+                <a
+                  href={job.external_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm text-center hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                >
+                  Apply Now
+                </a>
+              ) : isApplied ? (
+                <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" /> Applied
+                </div>
+              ) : (
+                <motion.button
+                  onClick={handleApply}
+                  disabled={applying}
+                  whileTap={{ scale: 0.96 }}
+                  className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-black/10 disabled:opacity-60"
+                >
+                  {applying
+                    ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                    : "Quick Apply"
+                  }
+                </motion.button>
+              )
+            ) : (
+              <Link
+                href="/auth"
+                className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm text-center hover:opacity-90 active:scale-95 transition-all shadow-lg"
+              >
+                Sign in to Apply
+              </Link>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-neutral-50 border-0">
+        <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 max-w-[1440px] mx-auto gap-8">
+          <div className="text-lg font-black text-neutral-950">PathAI</div>
+          <div className="flex flex-wrap justify-center gap-8">
+            {["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact"].map((link) => (
+              <a
+                key={link}
+                href="#"
+                className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 hover:text-neutral-950 transition-colors"
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+          <div className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400">
+            © 2024 PathAI. The Intelligent Curator.
+          </div>
+        </div>
+      </footer>
 
       <AnimatePresence>
         {showCoach && <InterviewCoach job={job} onClose={() => setShowCoach(false)} />}

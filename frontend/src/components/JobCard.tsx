@@ -208,7 +208,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
             {/* Title + company + tags */}
             <div className="min-w-0 flex-1">
               <Link href={`/jobs/${job.id}`} className="group/title">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-snug group-hover/title:text-orange-500 transition-colors duration-200 line-clamp-2">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-snug group-hover/title:text-[#0051d5] transition-colors duration-200 line-clamp-2">
                   {job.title}
                 </h3>
               </Link>
@@ -279,13 +279,13 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
               >
                 {summaryLoading ? (
                   <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
-                    <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0051d5]" />
                     Generating AI summary…
                   </div>
                 ) : summary ? (
                   <div className="mt-4 space-y-4">
                     {/* One-liner */}
-                    <p className="text-sm text-gray-700 dark:text-gray-200 font-medium italic border-l-2 border-orange-400 pl-3 leading-relaxed">
+                    <p className="text-sm text-gray-700 dark:text-gray-200 font-medium italic border-l-2 border-[#0051d5] pl-3 leading-relaxed">
                       {summary.one_liner}
                     </p>
 
@@ -300,7 +300,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                         {summary.experience_level}
                       </span>
                       {summary.highlights.slice(0, 2).map((h) => (
-                        <span key={h} className="inline-flex items-center gap-1 rounded-lg border border-orange-100 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30 px-2.5 py-1 text-xs font-semibold text-orange-700 dark:text-orange-300">
+                        <span key={h} className="inline-flex items-center gap-1 rounded-lg border border-[#0051d5]/20 dark:border-blue-700 bg-[#0051d5]/5 dark:bg-blue-900/30 px-2.5 py-1 text-xs font-semibold text-[#0051d5] dark:text-blue-300">
                           ✦ {h}
                         </span>
                       ))}
@@ -357,7 +357,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                             </span>
                           ))}
                           {skillGap.missing_skills.map((s) => (
-                            <span key={s} className="rounded-lg bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2.5 py-0.5 text-xs font-semibold">
+                            <span key={s} className="rounded-lg bg-[#0051d5]/8 dark:bg-blue-900/30 text-[#0051d5] dark:text-blue-300 px-2.5 py-0.5 text-xs font-semibold">
                               + {s}
                             </span>
                           ))}
@@ -392,7 +392,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
           <motion.button
             onClick={handleExpand}
             whileHover={{ x: 2 }}
-            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-orange-500 transition-colors"
+            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-[#0051d5] dark:hover:text-blue-400 transition-colors"
           >
             <Sparkles className="w-3.5 h-3.5" />
             {expanded ? "Show less" : "AI Summary & Skills"}
@@ -445,7 +445,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
                     title="Generate cover letter"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-600 dark:hover:border-orange-500 dark:hover:text-orange-400 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all"
                   >
                     <FileText className="w-3.5 h-3.5" />
                     Cover Letter
@@ -455,7 +455,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
                     title="AI interview prep"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-600 dark:hover:border-orange-500 dark:hover:text-orange-400 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all"
                   >
                     <GraduationCap className="w-3.5 h-3.5" />
                     Prep
@@ -473,8 +473,8 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                       title={saved ? "Remove bookmark" : "Save job"}
                       className={`w-7 h-7 flex items-center justify-center rounded-xl border transition-all duration-200 ${
                         saved
-                          ? "border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20"
-                          : "border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-500"
+                          ? "border-[#0051d5]/30 dark:border-blue-600/50 bg-[#0051d5]/5 dark:bg-blue-900/20"
+                          : "border-gray-200 dark:border-gray-600 hover:border-[#0051d5]/40 dark:hover:border-blue-500"
                       }`}
                     >
                       <AnimatePresence mode="wait" initial={false}>
@@ -486,7 +486,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                             exit={{ scale: 0, rotate: 20 }}
                             transition={{ type: "spring", stiffness: 600, damping: 20 }}
                           >
-                            <BookmarkCheck className="w-3.5 h-3.5 text-orange-500" />
+                            <BookmarkCheck className="w-3.5 h-3.5 text-[#0051d5]" />
                           </motion.div>
                         ) : (
                           <motion.div
@@ -507,7 +507,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
             ) : (
               <Link
                 href="/auth"
-                className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
+                className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-[#0051d5] dark:hover:text-blue-400 transition-colors"
               >
                 Sign in to apply &amp; track →
               </Link>
@@ -548,8 +548,8 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center shrink-0">
-                  <Briefcase className="w-5 h-5 text-orange-500" />
+                <div className="w-10 h-10 bg-[#0051d5]/10 dark:bg-blue-900/30 rounded-xl flex items-center justify-center shrink-0">
+                  <Briefcase className="w-5 h-5 text-[#0051d5]" />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
