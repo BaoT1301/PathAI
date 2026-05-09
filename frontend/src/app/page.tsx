@@ -1061,30 +1061,21 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-12">
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-12">
               {[
                 {
                   title: "Product",
                   links: [
                     { label: "Find Jobs", href: "/jobs" },
-                    { label: "Talent Network", href: "/jobs" },
-                    { label: "Resume Scan", href: "/jobs" },
+                    { label: "Dashboard", href: "/dashboard" },
+                    { label: "Resume", href: "/resume" },
                   ],
                 },
                 {
-                  title: "Company",
+                  title: "Account",
                   links: [
-                    { label: "Our Story", href: "/about" },
-                    { label: "Partners", href: "/about" },
-                    { label: "Contact", href: "/about" },
-                  ],
-                },
-                {
-                  title: "Social",
-                  links: [
-                    { label: "Twitter / X", href: "#" },
-                    { label: "LinkedIn", href: "#" },
-                    { label: "Substack", href: "#" },
+                    { label: "Sign In", href: "/auth" },
+                    { label: "Create Account", href: "/auth" },
                   ],
                 },
               ].map((col) => (
@@ -1111,7 +1102,7 @@ export default function HomePage() {
 
           <div className="flex flex-col md:flex-row justify-between items-center pt-12 border-t border-neutral-100 gap-8">
             <div className="text-xs font-bold text-neutral-400 tracking-widest uppercase">
-              Â© 2024 PathAI. All Rights Reserved.
+              © 2026 PathAI. All Rights Reserved.
             </div>
             <div className="flex gap-12">
               <a

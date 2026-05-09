@@ -150,6 +150,19 @@ export async function deleteApplication(id: string, token: string): Promise<void
   await authedFetch(`${API_URL}/api/applications/${id}`, token, { method: "DELETE" });
 }
 
+export async function getJobMatchScore(
+  jobId: string,
+  token: string
+): Promise<{ match_score: number; job_id: string } | null> {
+  try {
+    const res = await authedFetch(`${API_URL}/api/jobs/${jobId}/match-score`, token);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function getApplicationStatus(
   jobId: string,
   token?: string

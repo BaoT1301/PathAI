@@ -9,7 +9,7 @@ import {
   Loader2, CheckCircle2, Zap, Clock,
   Bookmark, BookmarkCheck, Share2, ExternalLink, Lightbulb,
 } from "lucide-react";
-import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus } from "@/lib/api";
+import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus, getJobMatchScore } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import InterviewCoach from "@/components/InterviewCoach";
 import CoverLetter from "@/components/CoverLetter";
@@ -52,6 +52,7 @@ export default function JobDetailPage() {
   const [saved, setSaved] = useState(false);
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [personalScore, setPersonalScore] = useState<number | null | "loading">("loading");
 
   useEffect(() => {
     if (!id) return;
@@ -62,12 +63,18 @@ export default function JobDetailPage() {
   }, [id, router]);
 
   useEffect(() => {
-    if (!id || !session?.access_token) return;
+    if (!id || !session?.access_token) {
+      setPersonalScore(null);
+      return;
+    }
     getApplicationStatus(id, session.access_token).then((s) => {
       if (s.status) setAppStatus(s.status);
     });
     getSavedJobStatus(id, session.access_token).then((s) => {
       setSaved(s.saved);
+    });
+    getJobMatchScore(id, session.access_token).then((data) => {
+      setPersonalScore(data?.match_score ?? null);
     });
   }, [id, session]);
 
@@ -140,9 +147,11 @@ export default function JobDetailPage() {
 
   const isApplied = appStatus !== null;
   const companyInitial = job.company?.[0]?.toUpperCase() ?? "?";
-  const matchScore = job.match_score != null ? Math.round(job.match_score) : null;
+  const resolvedScore = personalScore !== "loading" ? personalScore : job.match_score;
+  const matchScore = resolvedScore != null ? Math.round(resolvedScore) : null;
   const matchLabel =
-    matchScore == null ? "Upload Resume"
+    personalScore === "loading" ? "Analyzing…"
+    : matchScore == null ? "Upload Resume"
     : matchScore >= 80 ? "Strong Match"
     : matchScore >= 60 ? "Good Match"
     : "Partial Match";
@@ -291,9 +300,13 @@ export default function JobDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-baseline gap-2 mb-8">
-                  <span className="text-5xl font-black tracking-tighter">
-                    {matchScore != null ? `${matchScore}%` : "—"}
-                  </span>
+                  {personalScore === "loading" ? (
+                    <div className="h-12 w-24 bg-white/20 rounded-xl animate-pulse" />
+                  ) : (
+                    <span className="text-5xl font-black tracking-tighter">
+                      {matchScore != null ? `${matchScore}%` : "—"}
+                    </span>
+                  )}
                   <span className="text-white/80 font-medium">{matchLabel}</span>
                 </div>
                 <div className="space-y-4 mb-8">
@@ -302,7 +315,11 @@ export default function JobDetailPage() {
                       <Zap className="w-4 h-4" /> Skill Alignment
                     </p>
                     <p className="text-xs text-white/70">
-                      Your expertise matches the required skills for this role.
+                      {matchScore == null
+                        ? "Upload your resume to see how your skills align."
+                        : matchScore >= 70
+                        ? "Your skills closely match what this role requires."
+                        : "You meet some requirements — a few gaps exist."}
                     </p>
                   </div>
                   <div className="p-4 bg-white/10 rounded-xl">
@@ -310,7 +327,11 @@ export default function JobDetailPage() {
                       <Clock className="w-4 h-4" /> Career Path
                     </p>
                     <p className="text-xs text-white/70">
-                      Your background aligns with this company's vertical.
+                      {matchScore == null
+                        ? "Sign in and upload your resume for a full analysis."
+                        : matchScore >= 80
+                        ? "Strong trajectory fit — your background maps well."
+                        : "Relevant experience detected with room to grow."}
                     </p>
                   </div>
                 </div>
@@ -318,7 +339,7 @@ export default function JobDetailPage() {
                   href="/resume"
                   className="block w-full bg-white text-[#0051d5] py-3 rounded-xl font-bold text-sm text-center hover:bg-[#dbe1ff] transition-colors"
                 >
-                  Improve Match Rate
+                  {matchScore == null ? "Upload Resume" : "Improve Match Rate"}
                 </Link>
               </div>
             </div>

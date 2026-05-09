@@ -189,6 +189,47 @@ async def get_job(job_id: str, db: AsyncSession = Depends(get_db)):
     return resp
 
 
+@app.get("/api/jobs/{job_id}/match-score")
+@limiter.limit("20/minute")
+async def get_job_match_score(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Return a personalized AI match score for this job based on the user's saved resume."""
+    user_profile = await db.get(UserProfile, user["sub"])
+    if not user_profile or not user_profile.resume_summary:
+        raise HTTPException(status_code=404, detail="No saved resume")
+
+    from uuid import UUID as _UUID
+    try:
+        job_uuid = _UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID")
+
+    result = await db.execute(select(Job).where(Job.id == job_uuid))
+    job = result.scalar_one_or_none()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.embedding is None:
+        raise HTTPException(status_code=422, detail="Job not indexed yet")
+
+    resume_embedding = await get_embedding(user_profile.resume_summary)
+
+    dist_result = await db.execute(
+        select(Job.embedding.cosine_distance(resume_embedding).label("dist"))
+        .where(Job.id == job_uuid)
+    )
+    distance = dist_result.scalar()
+    cosine_sim = 1.0 - float(distance)
+
+    from services.matching import _normalize_score
+    score = _normalize_score(cosine_sim, [], f"{job.title} {job.description}")
+
+    return {"match_score": round(score, 1), "job_id": job_id}
+
+
 @app.get("/api/jobs/{job_id}/summary")
 @limiter.limit("30/minute")
 async def get_job_summary(request: Request, job_id: str, db: AsyncSession = Depends(get_db)):

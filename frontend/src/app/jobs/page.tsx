@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, ArrowRight, Zap, ChevronLeft, ChevronRight } from "lucide-react";
-import { Job, fetchJobs, fetchDepartments } from "@/lib/api";
+import { X, Sparkles, ArrowRight, Zap, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
+import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
 import { useNotifications } from "@/context/NotificationsContext";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CompanyLogo from "@/components/CompanyLogo";
 
@@ -39,7 +41,11 @@ function formatSalary(n: number) {
 
 /* ── FeaturedJobCard ──────────────────────────────────────────── */
 
-function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
+function FeaturedJobCard({
+  job, index, isSaved, onBookmark,
+}: {
+  job: Job; index: number; isSaved: boolean; onBookmark: (id: string) => void;
+}) {
   const isFeatured = index === 1;
   const score = job.match_score;
 
@@ -81,12 +87,23 @@ function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
         <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-6 flex-1">
           {job.description}
         </p>
-        <Link
-          href={`/jobs/${job.id}`}
-          className="block w-full bg-white text-black py-2 rounded-lg text-sm font-bold text-center active:scale-95 transition-transform"
-        >
-          Apply Fast
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href={`/jobs/${job.id}`}
+            className="flex-1 bg-white text-black py-2 rounded-lg text-sm font-bold text-center active:scale-95 transition-transform"
+          >
+            Apply Fast
+          </Link>
+          <button
+            onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+            className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors shrink-0"
+          >
+            {isSaved
+              ? <BookmarkCheck className="w-4 h-4 text-white" />
+              : <Bookmark className="w-4 h-4 text-white/70" />
+            }
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -120,19 +137,34 @@ function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
           {formatDept(job.department)}
         </span>
       </div>
-      <Link
-        href={`/jobs/${job.id}`}
-        className="w-full text-neutral-950 dark:text-white font-bold text-sm flex items-center justify-center gap-1 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-      >
-        View Details <ArrowRight className="w-3.5 h-3.5" />
-      </Link>
+      <div className="flex gap-2">
+        <Link
+          href={`/jobs/${job.id}`}
+          className="flex-1 text-neutral-950 dark:text-white font-bold text-sm flex items-center justify-center gap-1 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+        >
+          View Details <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+        <button
+          onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+          className="w-9 h-9 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
+        >
+          {isSaved
+            ? <BookmarkCheck className="w-4 h-4 text-[#0051d5]" />
+            : <Bookmark className="w-4 h-4 text-neutral-400" />
+          }
+        </button>
+      </div>
     </motion.div>
   );
 }
 
 /* ── JobListRow ───────────────────────────────────────────────── */
 
-function JobListRow({ job, index }: { job: Job; index: number }) {
+function JobListRow({
+  job, index, isSaved, onBookmark,
+}: {
+  job: Job; index: number; isSaved: boolean; onBookmark: (id: string) => void;
+}) {
   const score = job.match_score;
 
   return (
@@ -155,7 +187,7 @@ function JobListRow({ job, index }: { job: Job; index: number }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-6 mt-4 md:mt-0">
+      <div className="flex items-center gap-4 mt-4 md:mt-0">
         {score != null && (
           <div className="flex flex-col items-end">
             <span className="text-[0.6rem] font-bold text-[#0051d5] uppercase tracking-widest">
@@ -166,6 +198,15 @@ function JobListRow({ job, index }: { job: Job; index: number }) {
             </span>
           </div>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onBookmark(job.id); }}
+          className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        >
+          {isSaved
+            ? <BookmarkCheck className="w-4 h-4 text-[#0051d5]" />
+            : <Bookmark className="w-4 h-4 text-neutral-400" />
+          }
+        </button>
         <Link href={`/jobs/${job.id}`}>
           <button className="bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50 px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-shadow text-neutral-900 dark:text-white">
             View
@@ -247,8 +288,11 @@ export default function JobsPage() {
   const [seniority, setSeniority] = useState("");
   const [newJobAlert, setNewJobAlert] = useState<string | null>(null);
   const { addNotification } = useNotifications();
+  const { session } = useAuth();
+  const router = useRouter();
   const listRef = useRef<HTMLElement>(null);
   const PAGE_SIZE = 20;
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
   useJobFeed(
     useCallback(
@@ -269,6 +313,29 @@ export default function JobsPage() {
   useEffect(() => {
     fetchDepartments().then(setDepartments).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+    fetchSavedJobs(session.access_token)
+      .then((saved) => setSavedIds(new Set(saved.map((s) => s.job.id))))
+      .catch(() => {});
+  }, [session]);
+
+  const handleBookmark = async (jobId: string) => {
+    if (!session?.access_token) {
+      router.push("/auth");
+      return;
+    }
+    if (savedIds.has(jobId)) {
+      router.push("/dashboard");
+      return;
+    }
+    try {
+      await saveJob(jobId, session.access_token);
+      setSavedIds((prev) => new Set([...prev, jobId]));
+      router.push("/dashboard");
+    } catch { /* ignore */ }
+  };
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -446,16 +513,22 @@ export default function JobsPage() {
               <Sparkles className="w-4 h-4 text-[#316bf3]" />
             </div>
             <p className="text-sm leading-relaxed font-medium text-white/80">
-              PathAI has analyzed{" "}
+              PathAI has indexed{" "}
               <span className="text-white font-bold">
                 {total > 0 ? `${total} jobs` : "thousands of jobs"}
               </span>{" "}
               today.{" "}
               {total > 0 ? (
-                <>
-                  <span className="text-[#b4c5ff]">{total} matches</span> perfectly align
-                  with your profile.
-                </>
+                session?.access_token ? (
+                  <>
+                    Open any job to see your{" "}
+                    <span className="text-[#b4c5ff]">personalized match score</span>.
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[#b4c5ff]">Sign in</span> and upload your resume to unlock match scores.
+                  </>
+                )
               ) : (
                 <span className="text-white/50">Connecting to live feed…</span>
               )}
@@ -554,7 +627,13 @@ export default function JobsPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {featuredJobs.map((job, i) => (
-                      <FeaturedJobCard key={job.id} job={job} index={i} />
+                      <FeaturedJobCard
+                        key={job.id}
+                        job={job}
+                        index={i}
+                        isSaved={savedIds.has(job.id)}
+                        onBookmark={handleBookmark}
+                      />
                     ))}
                   </div>
                 </div>
@@ -571,7 +650,13 @@ export default function JobsPage() {
                   </div>
                   <div>
                     {listJobs.map((job, i) => (
-                      <JobListRow key={job.id} job={job} index={i} />
+                      <JobListRow
+                        key={job.id}
+                        job={job}
+                        index={i}
+                        isSaved={savedIds.has(job.id)}
+                        onBookmark={handleBookmark}
+                      />
                     ))}
                   </div>
 
