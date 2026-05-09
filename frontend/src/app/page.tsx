@@ -171,7 +171,7 @@ function ResumeScanner() {
           </div>
           <div>
             <div className="text-white text-xs font-bold">Alex Chen</div>
-            <div className="text-neutral-500 text-[10px]">San Francisco, CA Â· alex@gmail.com</div>
+            <div className="text-neutral-500 text-[10px]">San Francisco, CA · alex@gmail.com</div>
           </div>
         </motion.div>
 
@@ -181,7 +181,7 @@ function ResumeScanner() {
         </motion.div>
         <motion.div className="text-[10px] text-neutral-500 mb-3.5"
           initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.35 }}>
-          Google DeepMind Â· 2019 â€“ 2024
+          Google DeepMind · 2019 — 2024
         </motion.div>
 
         <motion.p className="text-[10px] text-neutral-400 leading-[1.7] mb-4"
@@ -207,7 +207,7 @@ function ResumeScanner() {
                 style={{ color: extracted ? "#93c5fd" : "#52525b" }}
                 animate={extracted ? { scale: [1, 1.08, 1] } : {}}
                 transition={{ delay: i * 0.06, duration: 0.28 }}>
-                {kw}{i < keywords.length - 1 ? " Â·" : ""}
+                {kw}{i < keywords.length - 1 ? " ·" : ""}
               </motion.span>
             ))}
           </div>
@@ -293,7 +293,7 @@ function MatchVisual() {
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 mb-2">
                 <span>{m.co}</span>
-                <span className="text-neutral-700">Â·</span>
+                <span className="text-neutral-700">·</span>
                 <span>{m.tag}</span>
               </div>
               <div className="h-[3px] w-full bg-neutral-700/40 rounded-full overflow-hidden">
@@ -340,9 +340,9 @@ function InsertionVisual() {
 
   const events = [
     { title: "Profile verified",                meta: "98th percentile fit detected",       time: "0:00", live: false },
-    { title: "Forwarded to Stripe Recruiting",  meta: "Sent to Sarah Chen Â· Sr. Recruiter", time: "0:03", live: false },
+    { title: "Forwarded to Stripe Recruiting",  meta: "Sent to Sarah Chen · Sr. Recruiter", time: "0:03", live: false },
     { title: "Recruiter opened profile",        meta: "3 min 24 sec dwell time",            time: "0:15", live: false },
-    { title: "Interview request sent",          meta: "Thu Â· 2:00 PM Pacific",              time: "now",  live: true  },
+    { title: "Interview request sent",          meta: "Thu · 2:00 PM Pacific",              time: "now",  live: true  },
   ];
 
   return (
@@ -354,7 +354,7 @@ function InsertionVisual() {
           <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
           <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
         </div>
-        <span className="text-[10px] text-neutral-500 font-mono tracking-wide">Application Â· Stripe</span>
+        <span className="text-[10px] text-neutral-500 font-mono tracking-wide">Application · Stripe</span>
         <motion.div
           className="px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/30 text-[9px] font-black text-green-400 uppercase tracking-wide"
           initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.1 }}>
@@ -413,7 +413,7 @@ function InsertionVisual() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-white text-[11px] font-bold">Interview Scheduled</div>
-          <div className="text-neutral-500 text-[10px]">Thursday Â· 2:00 PM Pacific Â· Google Meet</div>
+          <div className="text-neutral-500 text-[10px]">Thursday · 2:00 PM Pacific · Google Meet</div>
         </div>
         <motion.div className="w-2 h-2 rounded-full bg-green-400 shrink-0"
           animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
@@ -871,7 +871,7 @@ export default function HomePage() {
                   </h3>
                   <p className="text-neutral-400 font-bold uppercase tracking-widest text-sm mb-12">
                     {displayJobs[0].company &&
-                      `${displayJobs[0].company} â€¢ `}
+                      `${displayJobs[0].company} • `}
                     {displayJobs[0].location}
                   </p>
                   <div className="flex flex-wrap gap-4 mb-12">
@@ -919,7 +919,7 @@ export default function HomePage() {
                           {job.title}
                         </h4>
                         <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1 truncate">
-                          {job.company && `${job.company} â€¢ `}
+                          {job.company && `${job.company} • `}
                           {job.location}
                         </p>
                       </div>
