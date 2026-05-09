@@ -13,6 +13,7 @@ import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, ge
 import { useAuth } from "@/context/AuthContext";
 import InterviewCoach from "@/components/InterviewCoach";
 import CoverLetter from "@/components/CoverLetter";
+import CompanyLogo from "@/components/CompanyLogo";
 import Header from "@/components/Header";
 import Link from "next/link";
 
@@ -47,6 +48,7 @@ export default function JobDetailPage() {
   const [applying, setApplying] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
   const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [showAppliedModal, setShowAppliedModal] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -71,6 +73,26 @@ export default function JobDetailPage() {
 
   const handleApply = async () => {
     if (!session?.access_token || applying || !job) return;
+    setApplying(true);
+    try {
+      await applyToJob(job.id, session.access_token);
+      setAppStatus("applied");
+    } catch {
+      setAppStatus("applied");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleExternalApply = () => {
+    if (!job?.external_url) return;
+    window.open(job.external_url, "_blank", "noopener,noreferrer");
+    setShowAppliedModal(true);
+  };
+
+  const handleConfirmApplied = async () => {
+    setShowAppliedModal(false);
+    if (!session?.access_token || !job) return;
     setApplying(true);
     try {
       await applyToJob(job.id, session.access_token);
@@ -151,9 +173,10 @@ export default function JobDetailPage() {
             <section className="bg-white p-8 md:p-10 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.04)]">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="flex gap-6 items-start">
-                  <div className="w-16 h-16 rounded-xl bg-[#edeeef] flex items-center justify-center shrink-0 text-xl font-bold text-[#45474b]">
-                    {companyInitial}
-                  </div>
+                  <CompanyLogo
+                    company={job.company}
+                    className="w-16 h-16 rounded-xl shadow-sm text-xl"
+                  />
                   <div>
                     <h1 className="text-4xl font-bold tracking-tight text-black mb-2">
                       {job.title}
@@ -426,14 +449,19 @@ export default function JobDetailPage() {
 
             {user ? (
               job.source === "adzuna" && job.external_url ? (
-                <a
-                  href={job.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm text-center hover:opacity-90 active:scale-95 transition-all shadow-lg"
-                >
-                  Apply Now
-                </a>
+                isApplied ? (
+                  <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Applied
+                  </div>
+                ) : (
+                  <motion.button
+                    onClick={handleExternalApply}
+                    whileTap={{ scale: 0.96 }}
+                    className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                  >
+                    Apply Now
+                  </motion.button>
+                )
               ) : isApplied ? (
                 <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> Applied
@@ -489,6 +517,58 @@ export default function JobDetailPage() {
       </AnimatePresence>
       <AnimatePresence>
         {showCoverLetter && <CoverLetter job={job} onClose={() => setShowCoverLetter(false)} />}
+      </AnimatePresence>
+
+      {/* "Did you apply?" confirmation modal */}
+      <AnimatePresence>
+        {showAppliedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowAppliedModal(false)}
+            />
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.97 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 24, opacity: 0, scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              className="relative bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl"
+            >
+              <div className="w-14 h-14 bg-[#0051d5] rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-lg shadow-[#0051d5]/20">
+                <CheckCircle2 className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-black text-black text-center mb-2">
+                Did you apply?
+              </h3>
+              <p className="text-sm text-neutral-400 font-medium text-center leading-relaxed mb-8">
+                You were redirected to apply at{" "}
+                <span className="text-black font-bold">{job.company}</span>.{" "}
+                Did you complete the application?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAppliedModal(false)}
+                  className="flex-1 py-3 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-50 transition-colors"
+                >
+                  Not yet
+                </button>
+                <motion.button
+                  onClick={handleConfirmApplied}
+                  disabled={applying}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-bold hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, I applied!"}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

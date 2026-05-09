@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
 import { useNotifications } from "@/context/NotificationsContext";
 import Link from "next/link";
+import CompanyLogo from "@/components/CompanyLogo";
 
 const SENIORITY_OPTIONS = [
   { value: "", label: "All Levels" },
@@ -41,7 +42,6 @@ function formatSalary(n: number) {
 function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
   const isFeatured = index === 1;
   const score = job.match_score;
-  const companyInitial = job.company?.[0]?.toUpperCase() ?? "?";
 
   const badge = score != null && (
     <div className="absolute top-0 right-0 p-4">
@@ -70,9 +70,7 @@ function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
       >
         {badge}
         <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center font-bold text-base shrink-0">
-            {companyInitial}
-          </div>
+          <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
           <div className="min-w-0 pr-20">
             <h3 className="font-bold text-lg leading-snug line-clamp-2">{job.title}</h3>
             <p className="text-white/70 text-xs font-medium mt-0.5">
@@ -102,9 +100,7 @@ function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
     >
       {badge}
       <div className="flex items-start gap-4 mb-6">
-        <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center font-bold text-base text-neutral-600 dark:text-neutral-300 shrink-0">
-          {companyInitial}
-        </div>
+        <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
         <div className="min-w-0 pr-20">
           <h3 className="font-bold text-lg leading-snug text-neutral-950 dark:text-white line-clamp-2">
             {job.title}
@@ -138,7 +134,6 @@ function FeaturedJobCard({ job, index }: { job: Job; index: number }) {
 
 function JobListRow({ job, index }: { job: Job; index: number }) {
   const score = job.match_score;
-  const companyInitial = job.company?.[0]?.toUpperCase() ?? "?";
 
   return (
     <motion.div
@@ -148,9 +143,7 @@ function JobListRow({ job, index }: { job: Job; index: number }) {
       className="group flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-all duration-200 border-b border-neutral-200 dark:border-neutral-800 last:border-0"
     >
       <div className="flex gap-4 items-center">
-        <div className="w-10 h-10 bg-white dark:bg-neutral-900 rounded-lg flex items-center justify-center border border-neutral-200/60 dark:border-neutral-700/60 shadow-sm text-sm font-bold text-neutral-600 dark:text-neutral-400">
-          {companyInitial}
-        </div>
+        <CompanyLogo company={job.company} className="w-10 h-10 rounded-lg shadow-sm text-sm" />
         <div>
           <h4 className="font-bold text-base text-neutral-950 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-blue-400 transition-colors">
             {job.title}
