@@ -519,7 +519,7 @@ export default function HomePage() {
               >
                 We leverage proprietary LLMs to decode your career DNA and
                 match you with roles that don&apos;t just fit your
-                skillsâ€”they fit your trajectory.
+                skills—they fit your trajectory.
               </motion.p>
 
               <motion.div

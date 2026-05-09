@@ -127,7 +127,7 @@ export default function AuthPage() {
         </div>
 
         <div className="relative z-10 text-xs font-bold text-neutral-700 uppercase tracking-widest">
-          © 2024 PathAI. All rights reserved.
+          © 2026 PathAI. All rights reserved.
         </div>
       </div>
 

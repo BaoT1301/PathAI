@@ -431,7 +431,7 @@ export default function AboutPage() {
           <div className="flex flex-col items-center md:items-start gap-4">
             <div className="text-lg font-black text-zinc-950">PathAI</div>
             <div className="text-xs uppercase tracking-[0.1em] font-semibold text-zinc-400">
-              © 2024 PathAI. The Intelligent Curator.
+              © 2026 PathAI. The Intelligent Curator.
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
