@@ -32,11 +32,6 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-const SIMILAR_JOBS = [
-  { initial: "V", title: "Product Designer", company: "Vercel", salary: "$160k+" },
-  { initial: "R", title: "Staff Designer", company: "Ramp", salary: "$200k+" },
-];
-
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -411,32 +406,6 @@ export default function JobDetailPage() {
               )}
             </div>
 
-            {/* Similar Opportunities */}
-            <div className="space-y-4">
-              <h3 className="font-bold text-lg px-2">Similar Opportunities</h3>
-              <div className="space-y-3">
-                {SIMILAR_JOBS.map((sj) => (
-                  <div
-                    key={sj.title + sj.company}
-                    className="p-4 bg-white hover:bg-[#f3f4f5] rounded-xl transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center font-bold text-xs text-neutral-600 shrink-0">
-                        {sj.initial}
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold group-hover:text-[#0051d5] transition-colors">
-                          {sj.title}
-                        </h4>
-                        <p className="text-[10px] text-[#45474b] uppercase tracking-widest font-bold">
-                          {sj.company} • {sj.salary}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </aside>
         </div>
       </main>
@@ -528,7 +497,7 @@ export default function JobDetailPage() {
             ))}
           </div>
           <div className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400">
-            © 2024 PathAI. The Intelligent Curator.
+            © 2026 PathAI. The Intelligent Curator.
           </div>
         </div>
       </footer>

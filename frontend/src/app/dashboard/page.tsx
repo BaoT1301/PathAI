@@ -82,19 +82,19 @@ function ApplicationCard({
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0">
-          <Link href={`/jobs/${app.job.id}`}>
+          <Link href={`/jobs/${app.job?.id}`}>
             <h3 className="font-black text-black text-base leading-tight truncate hover:text-[#0051d5] transition-colors">
-              {app.job.title}
+              {app.job?.title ?? "Untitled Role"}
             </h3>
           </Link>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-500 flex-wrap">
             <span className="flex items-center gap-1">
               <Building2 className="w-3 h-3" />
-              {app.job.department}
+              {app.job?.department ?? "—"}
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
-              {app.job.location}
+              {app.job?.location ?? "—"}
             </span>
           </div>
         </div>
@@ -173,28 +173,30 @@ function SavedJobCard({ saved, onRemove }: { saved: SavedJob; onRemove: (jobId: 
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <Link href={`/jobs/${saved.job.id}`}>
+          <Link href={`/jobs/${saved.job?.id}`}>
             <h3 className="font-black text-black text-base leading-tight truncate hover:text-[#0051d5] transition-colors">
-              {saved.job.title}
+              {saved.job?.title ?? "Untitled Role"}
             </h3>
           </Link>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-500 flex-wrap">
             <span className="flex items-center gap-1">
               <Building2 className="w-3 h-3" />
-              {saved.job.company || saved.job.department}
+              {saved.job?.company || saved.job?.department || "—"}
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
-              {saved.job.location}
+              {saved.job?.location ?? "—"}
             </span>
-            <span className="flex items-center gap-1 font-bold text-neutral-700">
-              <DollarSign className="w-3 h-3 text-neutral-400" />
-              {saved.job.salary_range}
-            </span>
+            {saved.job?.salary_range && (
+              <span className="flex items-center gap-1 font-bold text-neutral-700">
+                <DollarSign className="w-3 h-3 text-neutral-400" />
+                {saved.job.salary_range}
+              </span>
+            )}
           </div>
         </div>
         <button
-          onClick={() => onRemove(saved.job.id)}
+          onClick={() => onRemove(saved.job?.id)}
           title="Remove bookmark"
           className="text-[#0051d5] hover:text-red-500 transition-colors shrink-0"
         >

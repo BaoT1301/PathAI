@@ -50,9 +50,9 @@ export default function AuthPage() {
 
   const handleResend = async () => {
     setResendLoading(true);
-    await supabase.auth.resend({ type: "signup", email });
+    const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
     setResendLoading(false);
-    setResendSent(true);
+    if (!resendError) setResendSent(true);
   };
 
   const switchTab = (t: Tab) => {

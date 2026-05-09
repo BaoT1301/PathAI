@@ -360,7 +360,8 @@ export default function JobsPage() {
   }, [loadJobs]);
 
   useEffect(() => {
-    setPage(1);
+    handlePageChange(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [department, seniority]);
 
   const handlePageChange = (p: number) => {
@@ -681,7 +682,7 @@ export default function JobsPage() {
               PathAI
             </span>
             <p className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-600">
-              © 2024 PathAI. The Intelligent Curator.
+              © 2026 PathAI. The Intelligent Curator.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-8">

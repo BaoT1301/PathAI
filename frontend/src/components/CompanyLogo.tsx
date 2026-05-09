@@ -11,7 +11,7 @@ export default function CompanyLogo({
 }) {
   const [error, setError] = useState(false);
   const initial = company?.[0]?.toUpperCase() ?? "?";
-  const slug = company?.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "") ?? "";
+  const slug = (company ?? "").toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 
   return (
     <div className={`bg-white border border-neutral-200/60 overflow-hidden flex items-center justify-center shrink-0 ${className}`}>
