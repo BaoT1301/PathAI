@@ -1,15 +1,24 @@
 <div align="center">
 
-# PathAI
+<br />
 
-**AI-powered career platform that matches candidates to roles using resume analysis and vector similarity search**
+![PathAI](https://img.shields.io/badge/PathAI-0051d5?style=for-the-badge&labelColor=000000&color=0051d5)
 
-[![Next.js](https://img.shields.io/badge/Next.js_16-black?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
-[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+### AI-powered job matching that analyzes your resume and surfaces roles that fit your trajectory — not just your keywords.
+
+<br />
+
+[![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white)](https://www.framer.com/motion)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python_3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![PostgreSQL](https://img.shields.io/badge/pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com)
+[![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
 
 </div>
 
@@ -17,9 +26,9 @@
 
 ## Overview
 
-PathAI is a full-stack job platform where candidates upload a resume and receive AI-ranked job matches. The matching engine combines structured seniority pre-filtering with pgvector cosine similarity search to surface roles that are genuinely relevant — not just keyword matches.
+PathAI is a full-stack job platform where candidates upload a resume and receive AI-ranked job matches. The matching engine combines GPT-4o-mini structured extraction with pgvector cosine similarity to surface roles that are genuinely relevant — correctly levelled by seniority, ranked by semantic fit.
 
-Built as a portfolio project demonstrating real-time systems, vector search, and multi-feature AI integration.
+Built as a portfolio project demonstrating vector search, AI-driven personalization, and a polished multi-page product experience.
 
 ---
 
@@ -27,16 +36,14 @@ Built as a portfolio project demonstrating real-time systems, vector search, and
 
 | Feature | Description |
 |---|---|
-| **Resume Matching** | Upload PDF/DOCX — GPT-4o-mini extracts your profile, pgvector ranks jobs by semantic fit |
-| **Real-Time Job Feed** | WebSocket delivers new postings instantly to all connected clients |
+| **Resume Matching** | Upload PDF/DOCX — GPT-4o-mini extracts your profile, pgvector ranks jobs by semantic similarity |
+| **Personalized Match Scores** | Every job detail page computes your cosine similarity score on demand against your resume embedding |
+| **Apply Flow** | External job links open the posting then prompt "Did you apply?" — confirmed applications land in your dashboard |
 | **ATS Dashboard** | Track applications across stages: Applied → Phone Screen → Interview → Offer → Hired |
-| **AI Interview Coach** | Role-specific interview questions with tips, generated per job and resume |
-| **Skills Gap Analysis** | Side-by-side view of required skills vs. yours for each matched role |
-| **Cover Letter Generator** | One-click cover letter scoped to the job and your experience |
-| **Salary Insights** | Market percentile comparison against similar roles in the same department |
-| **Job Alerts** | Real-time push notifications when a new job matches saved preferences |
-| **Authentication** | Supabase Auth with email/password, protected routes, session persistence |
-| **Dark Mode** | Class-based toggle with localStorage persistence |
+| **Saved Jobs** | Bookmark any job from the feed; saved roles appear in a dedicated dashboard section |
+| **Interview Prep** | Role-specific interview questions generated per job |
+| **Company Logos** | Clearbit logo API on all job cards with letter-initial fallback |
+| **Authentication** | Supabase Auth with email/password, email confirmation flow, and protected routes |
 
 ---
 
@@ -61,7 +68,7 @@ Jobs are filtered to only include roles within a compatible seniority band befor
 
 **Layer 2 — Vector Similarity**
 
-Each job stores a pre-computed embedding of its title and description. The resume text is embedded at upload time. pgvector computes cosine similarity and returns the top matches from the already-filtered pool.
+Each job stores a pre-computed pgvector embedding of its title and description. The resume text is embedded at upload time via `text-embedding-3-small`. Cosine distance is computed in-database and the top matches are returned from the already-filtered pool.
 
 The result: semantically relevant roles, correctly levelled.
 
@@ -71,17 +78,17 @@ The result: semantically relevant roles, correctly levelled.
 
 ```
 ┌──────────────────────┐         ┌──────────────────────┐
-│   Next.js Frontend   │ ──────► │   FastAPI Backend    │
+│   Next.js 16         │ ──────► │   FastAPI Backend    │
 │   (Vercel)           │ ◄────── │   (Railway)          │
 └──────────────────────┘         └──────────┬───────────┘
-          │                                 │
-          │  WebSocket (/ws/jobs)           ▼
-          └────────────────────►  ┌──────────────────────┐
+                                            │
+                                            ▼
+                                  ┌──────────────────────┐
                                   │  Supabase            │
                                   │  PostgreSQL + pgvector│
-                                  └──────────────────────┘
-                                           │
-                                           ▼
+                                  └──────────┬───────────┘
+                                            │
+                                            ▼
                                   ┌──────────────────────┐
                                   │  OpenAI API          │
                                   │  text-embedding-3-   │
@@ -91,38 +98,67 @@ The result: semantically relevant roles, correctly levelled.
 
 ---
 
+## Tech Stack
+
+**Frontend**
+
+| | Library | Purpose |
+|---|---|---|
+| [![Next.js](https://img.shields.io/badge/-Next.js_16-000?style=flat-square&logo=next.js)](https://nextjs.org) | Next.js 16 | App Router, SSR, routing |
+| [![React](https://img.shields.io/badge/-React_19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev) | React 19 | UI framework |
+| [![TypeScript](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org) | TypeScript | Type safety |
+| [![Tailwind](https://img.shields.io/badge/-Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com) | Tailwind CSS | Styling |
+| [![Framer](https://img.shields.io/badge/-Framer_Motion-0055FF?style=flat-square&logo=framer&logoColor=white)](https://framer.com/motion) | Framer Motion | Animations |
+
+**Backend**
+
+| | Library | Purpose |
+|---|---|---|
+| [![FastAPI](https://img.shields.io/badge/-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com) | FastAPI | REST API |
+| [![Python](https://img.shields.io/badge/-Python_3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org) | Python 3.14 | Runtime |
+| [![SQLAlchemy](https://img.shields.io/badge/-SQLAlchemy-CC2927?style=flat-square&logo=sqlalchemy&logoColor=white)](https://sqlalchemy.org) | SQLAlchemy 2 | ORM |
+
+**Data & AI**
+
+| | Service | Purpose |
+|---|---|---|
+| [![Supabase](https://img.shields.io/badge/-Supabase-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com) | Supabase | PostgreSQL, Auth |
+| [![pgvector](https://img.shields.io/badge/-pgvector-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) | pgvector | Vector similarity search |
+| [![OpenAI](https://img.shields.io/badge/-OpenAI-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com) | OpenAI | Embeddings + extraction |
+
+---
+
 ## Project Structure
 
 ```
-personalized-career-site/
-│
+PathAI/
 ├── frontend/                        # Next.js 16 — App Router
 │   └── src/
-│       ├── app/                     # Pages
-│       │   ├── page.tsx             # Landing
-│       │   ├── jobs/page.tsx        # Job listings + resume upload
-│       │   ├── jobs/[id]/page.tsx   # Job detail
-│       │   ├── dashboard/page.tsx   # ATS dashboard + saved jobs
+│       ├── app/
+│       │   ├── page.tsx             # Landing page
+│       │   ├── jobs/page.tsx        # Job listings with filters + pagination
+│       │   ├── jobs/[id]/page.tsx   # Job detail + AI Match Analysis widget
+│       │   ├── resume/page.tsx      # Resume upload + profile analysis
+│       │   ├── dashboard/page.tsx   # ATS dashboard, saved jobs, applications
 │       │   ├── about/page.tsx       # About / how it works
 │       │   └── auth/page.tsx        # Sign in / sign up
-│       ├── components/              # Header, JobCard, ResumeUpload,
-│       │                            # ProfileBanner, InterviewCoach,
-│       │                            # CoverLetter, SalaryInsights, LiveIndicator
-│       ├── context/                 # AuthContext, ThemeContext, NotificationsContext
-│       ├── hooks/                   # useJobFeed — WebSocket job stream
-│       └── lib/                     # api.ts, supabase.ts, utils.ts
+│       ├── components/
+│       │   └── CompanyLogo.tsx      # Clearbit logo with letter-initial fallback
+│       ├── context/
+│       │   └── AuthContext.tsx      # Supabase session management
+│       └── lib/
+│           ├── api.ts               # All API calls (jobs, resume, match score, saved)
+│           └── supabase.ts          # Supabase client
 │
 └── backend/                         # FastAPI (Python)
-    ├── main.py                      # All routes + WebSocket connection manager
+    ├── main.py                      # All routes + middleware
     ├── models.py                    # SQLAlchemy ORM models
     ├── schemas.py                   # Pydantic request / response schemas
     ├── auth.py                      # Supabase JWT verification
-    ├── seed_data.py                 # Synthetic job generator (500 jobs)
+    ├── seed_data.py                 # Synthetic job generator
     └── services/
         ├── matching.py              # Dual-layer matching logic
-        ├── resume_parser.py         # PDF/DOCX extraction + GPT parsing
-        ├── skill_gap.py             # Skills comparison engine
-        ├── interview_coach.py       # Interview question generation
+        ├── resume_parser.py         # PDF/DOCX extraction + GPT-4o-mini parsing
         └── embedding.py             # OpenAI embeddings wrapper
 ```
 
@@ -143,13 +179,11 @@ personalized-career-site/
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# Configure environment variables (see backend/.env.example)
-python seed_data.py        # Populates the DB with 500 synthetic jobs
-uvicorn main:app --reload  # Runs on http://localhost:8000
+python seed_data.py        # Populate DB with synthetic jobs
+uvicorn main:app --reload  # http://localhost:8000
 ```
 
-**Environment variables:**
+**`backend/.env`**
 
 ```env
 SUPABASE_URL=
@@ -164,13 +198,19 @@ DATABASE_URL=
 ```bash
 cd frontend
 npm install
-npm run dev    # Runs on http://localhost:3000
+npm run dev    # http://localhost:3000
 ```
 
-**Environment variables** (`.env.local`):
+**`frontend/.env.local`**
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
+
+---
+
+<div align="center">
+<sub>© 2026 PathAI</sub>
+</div>
