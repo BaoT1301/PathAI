@@ -7,7 +7,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import {
   MapPin, DollarSign, Building2, ChevronLeft,
   Loader2, CheckCircle2, Zap, Clock,
-  Bookmark, BookmarkCheck, Share2, ExternalLink,
+  Bookmark, BookmarkCheck, Share2, ExternalLink, Lightbulb,
 } from "lucide-react";
 import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -300,6 +300,28 @@ export default function JobDetailPage() {
               </div>
             </div>
 
+            {/* Interview Prep Card */}
+            <motion.div
+              whileHover={{ y: -2 }}
+              className="bg-black p-6 rounded-xl text-white cursor-pointer group"
+              onClick={() => setShowCoach(true)}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                  <Lightbulb className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">AI</span>
+              </div>
+              <h3 className="font-black text-white text-lg mb-1">Interview Prep</h3>
+              <p className="text-sm text-white/50 font-medium leading-relaxed mb-5">
+                Get role-specific questions with expert tips tailored to this position.
+              </p>
+              <div className="flex items-center gap-2 text-xs font-black text-white group-hover:text-white/80 transition-colors uppercase tracking-widest">
+                Generate Questions
+                <Zap className="w-3.5 h-3.5" />
+              </div>
+            </motion.div>
+
             {/* Company Overview Card */}
             <div className="bg-[#f3f4f5] p-8 rounded-xl border border-[#c6c6cb]/10">
               <h3 className="font-bold text-lg mb-6">
@@ -384,12 +406,20 @@ export default function JobDetailPage() {
               Applying with AI-Optimized Resume
             </p>
           </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <motion.button
+              onClick={() => setShowCoach(true)}
+              whileTap={{ scale: 0.96 }}
+              className="hidden md:flex items-center gap-2 px-5 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
+            >
+              <Lightbulb className="w-4 h-4" />
+              Interview Prep
+            </motion.button>
             <motion.button
               onClick={handleBookmark}
               disabled={savingBookmark}
               whileTap={{ scale: 0.96 }}
-              className="flex-1 md:flex-none px-8 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
+              className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
             >
               {saved ? "Saved ✓" : "Save Job"}
             </motion.button>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, ArrowRight, Zap } from "lucide-react";
+import { X, Sparkles, ArrowRight, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { Job, fetchJobs, fetchDepartments } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
@@ -183,6 +183,64 @@ function JobListRow({ job, index }: { job: Job; index: number }) {
   );
 }
 
+/* ── Pagination ───────────────────────────────────────────────── */
+
+function Pagination({
+  page, total, pageSize, onChange,
+}: {
+  page: number; total: number; pageSize: number; onChange: (p: number) => void;
+}) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return null;
+
+  const getPages = (): (number | "…")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (page <= 4) return [1, 2, 3, 4, 5, "…", totalPages];
+    if (page >= totalPages - 3) return [1, "…", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    return [1, "…", page - 1, page, page + 1, "…", totalPages];
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1 mt-12">
+      <button
+        onClick={() => onChange(page - 1)}
+        disabled={page === 1}
+        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4 text-neutral-600" />
+      </button>
+
+      {getPages().map((p, i) =>
+        p === "…" ? (
+          <span key={`ellipsis-${i}`} className="px-2 text-sm text-neutral-400 select-none">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(Number(p))}
+            className={`w-9 h-9 rounded-lg text-sm font-black transition-all ${
+              page === p
+                ? "bg-black text-white"
+                : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        onClick={() => onChange(page + 1)}
+        disabled={page === Math.ceil(total / pageSize)}
+        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="w-4 h-4 text-neutral-600" />
+      </button>
+    </div>
+  );
+}
+
 /* ── JobsPage ─────────────────────────────────────────────────── */
 
 export default function JobsPage() {
@@ -190,13 +248,14 @@ export default function JobsPage() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(true);
   const [salaryMax, setSalaryMax] = useState(300000);
   const [department, setDepartment] = useState("");
   const [seniority, setSeniority] = useState("");
   const [newJobAlert, setNewJobAlert] = useState<string | null>(null);
   const { addNotification } = useNotifications();
+  const listRef = useRef<HTMLElement>(null);
+  const PAGE_SIZE = 20;
 
   useJobFeed(
     useCallback(
@@ -223,14 +282,12 @@ export default function JobsPage() {
     try {
       const data = await fetchJobs({
         page,
-        page_size: 20,
+        page_size: PAGE_SIZE,
         department: department || undefined,
         seniority: seniority || undefined,
       });
-      // page 1 = fresh load/filter change; page > 1 = "Load More" (append)
-      setJobs((prev) => page === 1 ? data.jobs : [...prev, ...data.jobs]);
+      setJobs(data.jobs);
       setTotal(data.total);
-      setHasNext(data.has_next);
     } catch {
       /* API unavailable — jobs stay empty */
     } finally {
@@ -246,6 +303,11 @@ export default function JobsPage() {
     setPage(1);
   }, [department, seniority]);
 
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const clearFilters = () => {
     setDepartment("");
     setSeniority("");
@@ -253,8 +315,8 @@ export default function JobsPage() {
   };
 
   const hasFilters = department || seniority || salaryMax < 300000;
-  const featuredJobs = jobs.slice(0, 3);
-  const listJobs = jobs.slice(3);
+  const featuredJobs = page === 1 ? jobs.slice(0, 3) : [];
+  const listJobs = page === 1 ? jobs.slice(3) : jobs;
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-neutral-950 text-neutral-900 dark:text-white">
@@ -409,7 +471,7 @@ export default function JobsPage() {
         </aside>
 
         {/* ── MAIN CONTENT ── */}
-        <section className="flex-1 min-w-0">
+        <section ref={listRef} className="flex-1 min-w-0 scroll-mt-28">
 
           {loading ? (
             /* Skeleton */
@@ -520,19 +582,12 @@ export default function JobsPage() {
                     ))}
                   </div>
 
-                  {hasNext && (
-                    <div className="mt-12 flex justify-center">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setPage((p) => p + 1)}
-                        disabled={loading}
-                        className="px-8 py-3 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 text-[0.75rem] font-bold uppercase tracking-[0.2em] rounded-xl hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
-                      >
-                        Load More Results
-                      </motion.button>
-                    </div>
-                  )}
+                  <Pagination
+                    page={page}
+                    total={total}
+                    pageSize={PAGE_SIZE}
+                    onChange={handlePageChange}
+                  />
                 </section>
               )}
             </>
