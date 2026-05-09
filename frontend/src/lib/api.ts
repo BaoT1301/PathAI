@@ -1,5 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+
 async function authedFetch(url: string, token: string, options: RequestInit = {}) {
   const res = await fetch(url, {
     ...options,
