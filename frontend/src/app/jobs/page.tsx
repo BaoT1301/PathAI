@@ -77,16 +77,23 @@ function FeaturedJobCard({
         {badge}
         <div className="flex items-start gap-4 mb-6">
           <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
-          <div className="min-w-0 pr-20">
+          <div className={`min-w-0 ${score != null ? "pr-20" : ""}`}>
             <h3 className="font-bold text-lg leading-snug line-clamp-2">{job.title}</h3>
             <p className="text-white/70 text-xs font-medium mt-0.5">
               {job.company} • {job.location}
             </p>
           </div>
         </div>
-        <p className="text-white/60 text-xs leading-relaxed line-clamp-2 mb-6 flex-1">
-          {job.description}
-        </p>
+        <div className="flex flex-wrap content-start gap-2 mb-6 flex-1">
+          {job.salary_range && (
+            <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+              {job.salary_range}
+            </span>
+          )}
+          <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+            {formatDept(job.department)}
+          </span>
+        </div>
         <div className="flex gap-2">
           <Link
             href={`/jobs/${job.id}`}
@@ -128,7 +135,7 @@ function FeaturedJobCard({
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 mb-6 flex-1">
+      <div className="flex flex-wrap content-start gap-2 mb-6 flex-1">
         {job.salary_range && (
           <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
             {job.salary_range}
