@@ -17,7 +17,7 @@ from services.matching import get_matched_jobs
 from services.skill_gap import analyze_skill_gap
 from services.interview_coach import generate_interview_prep
 from services.adzuna_client import fetch_and_store_adzuna_jobs, seed_jobs_from_adzuna
-from auth import get_current_user, require_auth
+from auth import get_current_user, get_current_user_soft, require_auth
 from config import FRONTEND_URL, OPENAI_MODEL
 import json
 
@@ -216,6 +216,7 @@ async def list_jobs(
     location: str | None = None,
     search: str | None = None,
     salary_min: int | None = Query(None, ge=0),
+    user: dict | None = Depends(get_current_user_soft),
 ):
     # Build a deduplicating subquery: one row per unique (title, company)
     dedup_sub = (
@@ -244,19 +245,50 @@ async def list_jobs(
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
-    # Stable, deterministic ordering so pagination never repeats or drops jobs.
-    query = (
-        select(Job)
-        .where(*base_filter)
-        .order_by(Job.posted_date.desc(), Job.id)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
-    result = await db.execute(query)
-    jobs = result.scalars().all()
+    # If the user is signed in and has a cached resume embedding, rank the feed
+    # by personalized fit and attach a match score to each job. Otherwise fall
+    # back to a stable recency order. Either ordering is deterministic, so
+    # pagination never repeats or drops jobs.
+    resume_embedding = None
+    if user:
+        profile = await db.get(UserProfile, user["sub"])
+        if profile is not None and profile.resume_embedding is not None:
+            resume_embedding = list(profile.resume_embedding)
+
+    if resume_embedding is not None:
+        from services.matching import _normalize_score
+
+        distance = Job.embedding.cosine_distance(resume_embedding)
+        query = (
+            select(Job, distance.label("distance"))
+            .where(*base_filter)
+            .order_by(distance.nulls_last(), Job.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await db.execute(query)).all()
+        job_responses = []
+        for job, dist in rows:
+            resp = JobResponse.model_validate(job)
+            if dist is not None:
+                cosine_sim = 1.0 - float(dist)
+                resp.match_score = _normalize_score(
+                    cosine_sim, [], f"{job.title} {job.description}"
+                )
+            job_responses.append(resp)
+    else:
+        query = (
+            select(Job)
+            .where(*base_filter)
+            .order_by(Job.posted_date.desc(), Job.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        jobs = (await db.execute(query)).scalars().all()
+        job_responses = [JobResponse.model_validate(j) for j in jobs]
 
     return JobListResponse(
-        jobs=[JobResponse.model_validate(j) for j in jobs],
+        jobs=job_responses,
         total=total,
         page=page,
         page_size=page_size,

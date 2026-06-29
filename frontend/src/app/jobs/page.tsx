@@ -348,13 +348,16 @@ export default function JobsPage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await fetchJobs({
-        page,
-        page_size: PAGE_SIZE,
-        department: department || undefined,
-        seniority: seniority || undefined,
-        salary_min: debouncedSalary > 0 ? debouncedSalary : undefined,
-      });
+      const data = await fetchJobs(
+        {
+          page,
+          page_size: PAGE_SIZE,
+          department: department || undefined,
+          seniority: seniority || undefined,
+          salary_min: debouncedSalary > 0 ? debouncedSalary : undefined,
+        },
+        session?.access_token
+      );
       setJobs(data.jobs);
       setTotal(data.total);
     } catch {
@@ -366,7 +369,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, department, seniority, debouncedSalary]);
+  }, [page, department, seniority, debouncedSalary, session?.access_token]);
 
   useEffect(() => {
     loadJobs();

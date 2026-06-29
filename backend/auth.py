@@ -90,6 +90,24 @@ async def get_current_user(
     return await _verify_via_supabase(credentials.credentials)
 
 
+async def get_current_user_soft(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict | None:
+    """Like get_current_user, but never raises — returns None for missing,
+    invalid, or expired tokens. Use on public endpoints that *optionally*
+    personalize for a signed-in user (e.g. ranked job browsing), so a stale
+    token degrades gracefully to the anonymous experience instead of a 401."""
+    if not credentials:
+        return None
+    try:
+        local = _verify_jwt_locally(credentials.credentials)
+        if local is not None:
+            return local
+        return await _verify_via_supabase(credentials.credentials)
+    except Exception:
+        return None
+
+
 async def require_auth(user: dict | None = Depends(get_current_user)) -> dict:
     """Raises 401 if not authenticated. Use as a dependency on protected routes."""
     if not user:

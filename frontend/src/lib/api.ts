@@ -87,15 +87,18 @@ export interface Application {
   updated_at: string;
 }
 
-export async function fetchJobs(params: {
-  page?: number;
-  page_size?: number;
-  department?: string;
-  seniority?: string;
-  location?: string;
-  search?: string;
-  salary_min?: number;
-}): Promise<JobListResponse> {
+export async function fetchJobs(
+  params: {
+    page?: number;
+    page_size?: number;
+    department?: string;
+    seniority?: string;
+    location?: string;
+    search?: string;
+    salary_min?: number;
+  },
+  token?: string
+): Promise<JobListResponse> {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
@@ -103,7 +106,13 @@ export async function fetchJobs(params: {
     }
   });
 
-  const res = await fetch(`${API_URL}/api/jobs?${searchParams}`);
+  // Pass the token when available so the backend can rank the feed by the
+  // user's resume and attach personalized match scores. Anonymous requests
+  // (and stale tokens) still return the default recency-ordered feed.
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}/api/jobs?${searchParams}`, { headers });
   if (!res.ok) throw new Error("Failed to fetch jobs");
   return res.json();
 }
