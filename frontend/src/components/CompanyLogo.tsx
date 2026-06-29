@@ -4,16 +4,22 @@ import { useEffect, useMemo, useState } from "react";
 
 /**
  * Company logo with 100% visual coverage:
- *   real logo  ->  DuckDuckGo favicon of the resolved/guessed domain
+ *   real logo  ->  logo.dev image of the resolved/guessed domain (high-res)
  *   otherwise  ->  deterministic gradient monogram (color derived from name)
  *
  * The job API only gives a company *name*, and Clearbit's logo-by-name endpoint
  * was shut down. So we resolve name -> domain via Clearbit's still-live (and
- * CORS-enabled) autocomplete API, then render the logo from DuckDuckGo's icon
- * service. DuckDuckGo returns 404 when a domain has no icon, so the <img>
- * onError lets us fall through candidates and ultimately to the monogram —
- * we never render a broken image or a generic globe.
+ * CORS-enabled) autocomplete API, then render the logo from logo.dev with
+ * fallback=404 (so a domain with no logo returns 404 instead of a placeholder).
+ * The <img> onError then falls through candidates and finally to the monogram —
+ * we never render a broken image or a stand-in graphic.
  */
+
+// logo.dev publishable token (safe to expose client-side by design). Override
+// via NEXT_PUBLIC_LOGODEV_TOKEN. Restrict it to your domain in the logo.dev
+// dashboard since it ships in the client bundle.
+const LOGO_TOKEN =
+  process.env.NEXT_PUBLIC_LOGODEV_TOKEN || "pk_dZ1Yl8GhQVC_5uzCS5ET9Q";
 
 // Words that aren't part of the brand and hurt name -> domain resolution.
 const NOISE = new Set([
@@ -23,13 +29,18 @@ const NOISE = new Set([
   "of", "consulting", "partners", "associates", "enterprises", "industries",
 ]);
 
-function tokens(name: string): string[] {
+function tokenize(name: string): string[] {
   return name
     .toLowerCase()
     .split(/[\s,./\-&]+/)
     .filter((t) => t && !NOISE.has(t));
 }
-const clean = (name: string) => tokens(name).join("");
+
+// True when token array `a` is a leading prefix of `b` (same brand, e.g.
+// ["booz","allen"] is a prefix of ["booz","allen","hamilton"]).
+function isPrefix(a: string[], b: string[]): boolean {
+  return a.length > 0 && a.length <= b.length && a.every((t, i) => b[i] === t);
+}
 
 // Session-wide cache so each company name is resolved at most once.
 const domainCache = new Map<string, string | null>();
@@ -48,26 +59,35 @@ async function suggest(query: string): Promise<{ name: string; domain: string }[
 async function resolveDomain(company: string): Promise<string | null> {
   if (domainCache.has(company)) return domainCache.get(company)!;
 
-  const cleaned = clean(company);
-  const tks = tokens(company);
-  // Query the full name first (most precise), then progressively shorter forms
-  // so legal/suffixed names still resolve ("L3Harris Technologies" -> "L3Harris").
-  const queries = [company];
-  if (tks.length > 2) queries.push(tks.slice(0, 2).join(" "));
-  if (tks.length > 1) queries.push(tks[0]);
+  const cTokens = tokenize(company);
+  const cleaned = cTokens.join("");
+
+  // Try the full name first, then progressively stripped/shortened forms so
+  // legal names resolve even when the full string returns nothing
+  // ("L3Harris Technologies" -> "l3harris", "Booz Allen Hamilton" -> "booz allen").
+  const queries = Array.from(
+    new Set(
+      [
+        company,
+        cTokens.join(" "),
+        cTokens.slice(0, 2).join(" "),
+        cTokens[0],
+      ].filter(Boolean)
+    )
+  );
 
   let domain: string | null = null;
   for (const q of queries) {
     const results = await suggest(q);
     for (const r of results) {
+      const rTokens = tokenize(r.name || "");
       const root = (r.domain || "").split(".")[0];
-      const rn = clean(r.name || "");
-      // Accept only confident matches to avoid showing the wrong company.
+      // Accept only a confident brand match (token prefix either direction, or
+      // an exact domain-root match) so we never show the wrong company.
       if (
-        root === cleaned ||
-        rn === cleaned ||
-        (rn.length >= 4 && cleaned.startsWith(rn)) ||
-        (root.length >= 4 && root === tks[0])
+        isPrefix(rTokens, cTokens) ||
+        isPrefix(cTokens, rTokens) ||
+        root === cleaned
       ) {
         domain = r.domain;
         break;
@@ -95,10 +115,10 @@ export default function CompanyLogo({
   className?: string;
 }) {
   const initial = company?.[0]?.toUpperCase() ?? "?";
-  const cleaned = useMemo(() => (company ? clean(company) : ""), [company]);
+  const cleaned = useMemo(() => (company ? tokenize(company).join("") : ""), [company]);
   const hue = useMemo(() => hueFromName(company || "?"), [company]);
 
-  // Ordered domain candidates to try as a favicon. Empty => monogram.
+  // Ordered domain candidates to try as a logo. Empty => monogram.
   const [candidates, setCandidates] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
 
@@ -144,7 +164,7 @@ export default function CompanyLogo({
       {domain ? (
         <img
           key={domain}
-          src={`https://icons.duckduckgo.com/ip3/${domain}.ico`}
+          src={`https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=128&format=png&retina=true&fallback=404`}
           alt={company ?? ""}
           className="w-full h-full object-contain p-[15%]"
           onError={() => setIdx((i) => i + 1)}
