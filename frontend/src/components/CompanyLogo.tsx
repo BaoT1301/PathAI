@@ -166,7 +166,7 @@ export default function CompanyLogo({
           key={domain}
           src={`https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=128&format=png&retina=true&fallback=404`}
           alt={company ?? ""}
-          className="w-full h-full object-contain p-[15%]"
+          className="w-full h-full object-cover"
           onError={() => setIdx((i) => i + 1)}
           loading="lazy"
         />
