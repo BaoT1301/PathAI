@@ -1,9 +1,4 @@
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY
-
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
-
-EMBEDDING_MODEL = "text-embedding-3-small"
+from services.openai_client import client, EMBEDDING_MODEL
 
 
 async def get_embedding(text: str) -> list[float]:

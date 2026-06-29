@@ -2,11 +2,9 @@ import json
 import pdfplumber
 import docx
 from io import BytesIO
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL
+from config import OPENAI_MODEL
 from schemas import ResumeProfile
-
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+from services.openai_client import client
 
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:

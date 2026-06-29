@@ -96,6 +96,7 @@ function FeaturedJobCard({
           </Link>
           <button
             onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+            aria-label={isSaved ? "View saved job" : "Save job"}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors shrink-0"
           >
             {isSaved
@@ -146,6 +147,7 @@ function FeaturedJobCard({
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
+          aria-label={isSaved ? "View saved job" : "Save job"}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
         >
           {isSaved
@@ -200,6 +202,7 @@ function JobListRow({
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onBookmark(job.id); }}
+          aria-label={isSaved ? "View saved job" : "Save job"}
           className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
         >
           {isSaved
@@ -239,6 +242,7 @@ function Pagination({
       <button
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
+        aria-label="Previous page"
         className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronLeft className="w-4 h-4 text-neutral-600" />
@@ -267,6 +271,7 @@ function Pagination({
       <button
         onClick={() => onChange(page + 1)}
         disabled={page === Math.ceil(total / pageSize)}
+        aria-label="Next page"
         className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight className="w-4 h-4 text-neutral-600" />
@@ -283,7 +288,9 @@ export default function JobsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [salaryMax, setSalaryMax] = useState(300000);
+  const [error, setError] = useState(false);
+  const [salaryMin, setSalaryMin] = useState(0);
+  const [debouncedSalary, setDebouncedSalary] = useState(0);
   const [department, setDepartment] = useState("");
   const [seniority, setSeniority] = useState("");
   const [newJobAlert, setNewJobAlert] = useState<string | null>(null);
@@ -339,30 +346,41 @@ export default function JobsPage() {
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const data = await fetchJobs({
         page,
         page_size: PAGE_SIZE,
         department: department || undefined,
         seniority: seniority || undefined,
+        salary_min: debouncedSalary > 0 ? debouncedSalary : undefined,
       });
       setJobs(data.jobs);
       setTotal(data.total);
     } catch {
-      /* API unavailable — jobs stay empty */
+      // Couldn't reach the API — surface a distinct error state instead of
+      // masking it as "no jobs found".
+      setError(true);
+      setJobs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page, department, seniority]);
+  }, [page, department, seniority, debouncedSalary]);
 
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
 
+  // Debounce the salary slider so dragging doesn't fire a request per tick.
   useEffect(() => {
-    handlePageChange(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [department, seniority]);
+    const t = setTimeout(() => setDebouncedSalary(salaryMin), 350);
+    return () => clearTimeout(t);
+  }, [salaryMin]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [department, seniority, debouncedSalary]);
 
   const handlePageChange = (p: number) => {
     setPage(p);
@@ -372,12 +390,15 @@ export default function JobsPage() {
   const clearFilters = () => {
     setDepartment("");
     setSeniority("");
-    setSalaryMax(300000);
+    setSalaryMin(0);
   };
 
-  const hasFilters = department || seniority || salaryMax < 300000;
-  const featuredJobs = page === 1 ? jobs.slice(0, 3) : [];
-  const listJobs = page === 1 ? jobs.slice(3) : jobs;
+  const hasFilters = department || seniority || salaryMin > 0;
+  // Only surface the featured bento grid when there are enough results to also
+  // fill a list below it — otherwise show everything as list rows.
+  const useFeatured = page === 1 && jobs.length >= 4;
+  const featuredJobs = useFeatured ? jobs.slice(0, 3) : [];
+  const listJobs = useFeatured ? jobs.slice(3) : jobs;
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-neutral-950 text-neutral-900 dark:text-white">
@@ -428,48 +449,52 @@ export default function JobsPage() {
                 </select>
               </div>
 
-              {/* Role Type */}
+              {/* Popular quick-filters — single-select, synced with Industry above */}
               <div>
                 <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
-                  Role Type
+                  Popular
                 </label>
-                <div className="space-y-2.5">
-                  {ROLE_TYPE_FILTERS.map((opt) => (
-                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={department === opt.value}
-                        onChange={() =>
-                          setDepartment(department === opt.value ? "" : opt.value)
-                        }
-                        className="rounded-sm border-neutral-400 text-neutral-900 focus:ring-0 cursor-pointer"
-                      />
-                      <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                <div className="flex flex-wrap gap-2">
+                  {ROLE_TYPE_FILTERS.map((opt) => {
+                    const active = department === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setDepartment(active ? "" : opt.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                          active
+                            ? "bg-[#0051d5] text-white border-[#0051d5]"
+                            : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-[#0051d5] hover:text-[#0051d5]"
+                        }`}
+                      >
                         {opt.label}
-                      </span>
-                    </label>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Salary Range */}
+              {/* Minimum Salary */}
               <div>
                 <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
-                  Salary Range (USD)
+                  Minimum Salary (USD)
                 </label>
                 <input
                   type="range"
-                  min={50000}
+                  min={0}
                   max={300000}
                   step={10000}
-                  value={salaryMax}
-                  onChange={(e) => setSalaryMax(Number(e.target.value))}
+                  value={salaryMin}
+                  onChange={(e) => setSalaryMin(Number(e.target.value))}
+                  aria-label="Minimum salary"
                   className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-neutral-900 dark:accent-white"
                 />
                 <div className="flex justify-between mt-2 text-[0.7rem] font-medium text-neutral-500 dark:text-neutral-400">
-                  <span>$50k</span>
+                  <span>Any</span>
                   <span className="text-neutral-900 dark:text-white font-bold">
-                    {salaryMax >= 300000 ? "$300k+" : formatSalary(salaryMax)}
+                    {salaryMin === 0 ? "Any" : `${formatSalary(salaryMin)}+`}
                   </span>
                   <span>$300k+</span>
                 </div>
@@ -585,6 +610,26 @@ export default function JobsPage() {
                 ))}
               </div>
             </div>
+          ) : error ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-32 gap-3"
+            >
+              <div className="w-16 h-16 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-2xl">
+                ⚠️
+              </div>
+              <p className="text-lg font-bold">Couldn&apos;t reach the server</p>
+              <p className="text-sm text-neutral-400 text-center max-w-xs">
+                The job service isn&apos;t responding. It may be starting up or temporarily down.
+              </p>
+              <button
+                onClick={() => loadJobs()}
+                className="mt-2 px-4 py-2 rounded-lg bg-[#0051d5] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Try again
+              </button>
+            </motion.div>
           ) : jobs.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
@@ -686,14 +731,19 @@ export default function JobsPage() {
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
-            {["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact"].map((link) => (
-              <a
-                key={link}
-                href="#"
+            {[
+              { label: "Browse Jobs", href: "/jobs" },
+              { label: "Upload Resume", href: "/resume" },
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "About", href: "/about" },
+            ].map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
                 className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-600 hover:text-neutral-950 dark:hover:text-neutral-100 transition-colors opacity-70 hover:opacity-100 duration-300"
               >
-                {link}
-              </a>
+                {link.label}
+              </Link>
             ))}
           </div>
         </div>

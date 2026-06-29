@@ -48,6 +48,7 @@ export default function JobDetailPage() {
   const [savingBookmark, setSavingBookmark] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [personalScore, setPersonalScore] = useState<number | null | "loading">("loading");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -103,6 +104,27 @@ export default function JobDetailPage() {
       setAppStatus("applied");
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!job) return;
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const shareData = {
+      title: job.title,
+      text: `${job.title}${job.company ? ` at ${job.company}` : ""} — on PathAI`,
+      url,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      /* user cancelled share or clipboard blocked — ignore */
     }
   };
 
@@ -211,6 +233,7 @@ export default function JobDetailPage() {
                   <motion.button
                     onClick={handleBookmark}
                     disabled={savingBookmark}
+                    aria-label={saved ? "Remove bookmark" : "Save job"}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     animate={justSaved ? { scale: [1, 1.15, 0.95, 1] } : { scale: 1 }}
@@ -222,8 +245,17 @@ export default function JobDetailPage() {
                       : <Bookmark className="w-5 h-5 text-[#45474b]" />
                     }
                   </motion.button>
-                  <button className="p-3 rounded-full hover:bg-[#edeeef] transition-colors">
+                  <button
+                    onClick={handleShare}
+                    aria-label="Share job"
+                    className="relative p-3 rounded-full hover:bg-[#edeeef] transition-colors"
+                  >
                     <Share2 className="w-5 h-5 text-[#45474b]" />
+                    {linkCopied && (
+                      <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md">
+                        Link copied
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -486,14 +518,19 @@ export default function JobDetailPage() {
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 max-w-[1440px] mx-auto gap-8">
           <div className="text-lg font-black text-neutral-950">PathAI</div>
           <div className="flex flex-wrap justify-center gap-8">
-            {["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact"].map((link) => (
-              <a
-                key={link}
-                href="#"
+            {[
+              { label: "Browse Jobs", href: "/jobs" },
+              { label: "Upload Resume", href: "/resume" },
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "About", href: "/about" },
+            ].map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
                 className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 hover:text-neutral-950 transition-colors"
               >
-                {link}
-              </a>
+                {link.label}
+              </Link>
             ))}
           </div>
           <div className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400">

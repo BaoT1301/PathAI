@@ -1,8 +1,6 @@
 import json
-from openai import AsyncOpenAI
-from config import OPENAI_API_KEY, OPENAI_MODEL
-
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+from config import OPENAI_MODEL
+from services.openai_client import client
 
 
 async def generate_interview_prep(

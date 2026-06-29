@@ -94,6 +94,7 @@ export async function fetchJobs(params: {
   seniority?: string;
   location?: string;
   search?: string;
+  salary_min?: number;
 }): Promise<JobListResponse> {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {

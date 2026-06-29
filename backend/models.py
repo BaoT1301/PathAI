@@ -17,6 +17,10 @@ class Job(Base):
     department: Mapped[str] = mapped_column(String(100))
     seniority: Mapped[str] = mapped_column(String(50))
     salary_range: Mapped[str] = mapped_column(String(100))
+    # Numeric salary bounds (annual USD) used for filtering/insights.
+    # Nullable because not every posting publishes a salary.
+    salary_min_value: Mapped[int | None] = mapped_column(nullable=True)
+    salary_max_value: Mapped[int | None] = mapped_column(nullable=True)
     posted_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -70,6 +74,9 @@ class UserProfile(Base):
 
     user_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     resume_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Cached embedding of the uploaded resume so per-job match scores don't
+    # re-call the OpenAI embedding API on every job view.
+    resume_embedding = mapped_column(Vector(1536), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

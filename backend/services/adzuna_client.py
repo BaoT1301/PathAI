@@ -81,11 +81,77 @@ def _format_salary(az_job: dict) -> str:
     return "Competitive"
 
 
+def _salary_bounds(az_job: dict) -> tuple[int | None, int | None]:
+    """Numeric (min, max) annual salary from a raw Adzuna job, or (None, None)."""
+    lo = az_job.get("salary_min")
+    hi = az_job.get("salary_max")
+    lo_i = int(lo) if lo else None
+    hi_i = int(hi) if hi else None
+    # If only one bound is present, mirror it so range filters still work.
+    if lo_i and not hi_i:
+        hi_i = lo_i
+    if hi_i and not lo_i:
+        lo_i = hi_i
+    return lo_i, hi_i
+
+
+def parse_salary_range(s: str | None) -> tuple[int | None, int | None]:
+    """Parse a display salary string (e.g. '$120k–$180k', '$100k+') back into
+    numeric (min, max) dollars. Used to backfill rows stored before numeric
+    salary columns existed. Returns (None, None) when unparseable."""
+    if not s:
+        return None, None
+    # Normalise 'k'/'K' shorthand to thousands, then pull out the numbers.
+    norm = s.replace("k", "000").replace("K", "000")
+    nums = [int(n.replace(",", "")) for n in re.findall(r"[\d,]+", norm) if n.replace(",", "").isdigit()]
+    if not nums:
+        return None, None
+    if len(nums) == 1:
+        return nums[0], nums[0]
+    return min(nums), max(nums)
+
+
 def _strip_html(text: str) -> str:
     """Remove HTML tags and decode HTML entities."""
     text = re.sub(r"<[^>]+>", " ", text)
     text = html.unescape(text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _normalize_az(az: dict) -> dict | None:
+    """Convert one raw Adzuna job into our normalized job dict, or None if it
+    lacks an external id."""
+    external_id = str(az.get("id", "")).strip()
+    if not external_id:
+        return None
+    lo, hi = _salary_bounds(az)
+    return {
+        "external_id": external_id,
+        "title": az.get("title", "").strip(),
+        "company": az.get("company", {}).get("display_name", "Unknown"),
+        "location": az.get("location", {}).get("display_name", "Remote"),
+        "description": _strip_html(az.get("description", "")),
+        "salary_range": _format_salary(az),
+        "salary_min_value": lo,
+        "salary_max_value": hi,
+        "department": CATEGORY_TO_DEPT.get(az.get("category", {}).get("tag", ""), "engineering"),
+        "seniority": _infer_seniority(az.get("title", "")),
+        "external_url": az.get("redirect_url", ""),
+        "source": "adzuna",
+    }
+
+
+def _dedupe(normalized: list[dict]) -> list[dict]:
+    """Drop duplicate (title, company) pairs — Adzuna reposts the same job
+    across many locations."""
+    seen: set[tuple[str, str]] = set()
+    out: list[dict] = []
+    for n in normalized:
+        key = (n["title"].lower(), n["company"].lower())
+        if key not in seen:
+            seen.add(key)
+            out.append(n)
+    return out
 
 
 def _cosine_sim(a: list[float], b: list[float]) -> float:
@@ -177,40 +243,10 @@ async def fetch_and_store_adzuna_jobs(
     if not raw_jobs:
         return []
 
-    # Normalize all Adzuna jobs
-    normalized: list[dict] = []
-    for az in raw_jobs:
-        external_id = str(az.get("id", "")).strip()
-        if not external_id:
-            continue
-        desc = _strip_html(az.get("description", ""))
-        normalized.append({
-            "external_id": external_id,
-            "title": az.get("title", "").strip(),
-            "company": az.get("company", {}).get("display_name", "Unknown"),
-            "location": az.get("location", {}).get("display_name", "Remote"),
-            "description": desc,
-            "salary_range": _format_salary(az),
-            "department": CATEGORY_TO_DEPT.get(
-                az.get("category", {}).get("tag", ""), "engineering"
-            ),
-            "seniority": _infer_seniority(az.get("title", "")),
-            "external_url": az.get("redirect_url", ""),
-            "source": "adzuna",
-        })
-
+    # Normalize + deduplicate all Adzuna jobs
+    normalized = _dedupe([n for az in raw_jobs if (n := _normalize_az(az))])
     if not normalized:
         return []
-
-    # Deduplicate by (title, company) — Adzuna posts the same job across many locations
-    seen: set[tuple[str, str]] = set()
-    deduped: list[dict] = []
-    for n in normalized:
-        key = (n["title"].lower(), n["company"].lower())
-        if key not in seen:
-            seen.add(key)
-            deduped.append(n)
-    normalized = deduped
 
     # Find which external_ids already exist
     external_ids = [n["external_id"] for n in normalized]
@@ -245,6 +281,8 @@ async def fetch_and_store_adzuna_jobs(
                 location=job_data["location"],
                 description=job_data["description"],
                 salary_range=job_data["salary_range"],
+                salary_min_value=job_data["salary_min_value"],
+                salary_max_value=job_data["salary_max_value"],
                 department=job_data["department"],
                 seniority=job_data["seniority"],
                 external_url=job_data["external_url"],
@@ -305,83 +343,73 @@ _SEED_KEYWORDS = [
 ]
 
 
+async def fetch_store_keyword(db: AsyncSession, keyword: str, country: str = "us", pages: int = 1) -> list[Job]:
+    """Fetch one keyword from Adzuna, store any genuinely new jobs, and return
+    the newly inserted Job rows. Shared by startup seeding and the periodic
+    live-feed refresh."""
+    raw_jobs = await _fetch_raw(keyword, country, per_page=50, pages=pages)
+    if not raw_jobs:
+        return []
+
+    deduped = _dedupe([n for az in raw_jobs if (n := _normalize_az(az))])
+    if not deduped:
+        return []
+
+    # Skip already-stored external_ids
+    ext_ids = [n["external_id"] for n in deduped]
+    existing = {
+        row[0]
+        for row in (await db.execute(select(Job.external_id).where(Job.external_id.in_(ext_ids)))).all()
+    }
+    new_data = [n for n in deduped if n["external_id"] not in existing]
+    if not new_data:
+        return []
+
+    # Embed in batches of 10
+    embed_texts = [f"{j['title']} at {j['company']}. {j['description']}"[:8000] for j in new_data]
+    all_embeddings: list[list[float] | None] = []
+    for i in range(0, len(embed_texts), 10):
+        batch = embed_texts[i: i + 10]
+        results_batch = await asyncio.gather(*[get_embedding(t) for t in batch], return_exceptions=True)
+        for emb in results_batch:
+            all_embeddings.append(emb if not isinstance(emb, Exception) else None)
+
+    inserted: list[Job] = []
+    for job_data, emb in zip(new_data, all_embeddings):
+        job = Job(
+            title=job_data["title"],
+            company=job_data["company"],
+            location=job_data["location"],
+            description=job_data["description"],
+            salary_range=job_data["salary_range"],
+            salary_min_value=job_data["salary_min_value"],
+            salary_max_value=job_data["salary_max_value"],
+            department=job_data["department"],
+            seniority=job_data["seniority"],
+            external_url=job_data["external_url"],
+            external_id=job_data["external_id"],
+            source="adzuna",
+            embedding=emb,
+        )
+        db.add(job)
+        inserted.append(job)
+
+    await db.commit()
+    for job in inserted:
+        await db.refresh(job)
+    print(f"[Adzuna] '{keyword}' → {len(inserted)} new jobs stored")
+    return inserted
+
+
 async def seed_jobs_from_adzuna(db: AsyncSession, country: str = "us") -> int:
     """
     Fetch a broad set of jobs at startup so the browse page has content even
     before any resume is uploaded.  Uses 1 page × 50 per keyword to stay well
-    within the Adzuna free-tier 250 req/day limit (10 requests total).
+    within the Adzuna free-tier 250 req/day limit (14 requests total).
     Returns the number of new jobs inserted.
     """
     total_inserted = 0
     for kw in _SEED_KEYWORDS:
-        raw_jobs = await _fetch_raw(kw, country, per_page=50, pages=1)
-        if not raw_jobs:
-            continue
-
-        normalized: list[dict] = []
-        for az in raw_jobs:
-            external_id = str(az.get("id", "")).strip()
-            if not external_id:
-                continue
-            desc = _strip_html(az.get("description", ""))
-            normalized.append({
-                "external_id": external_id,
-                "title": az.get("title", "").strip(),
-                "company": az.get("company", {}).get("display_name", "Unknown"),
-                "location": az.get("location", {}).get("display_name", "Remote"),
-                "description": desc,
-                "salary_range": _format_salary(az),
-                "department": CATEGORY_TO_DEPT.get(az.get("category", {}).get("tag", ""), "engineering"),
-                "seniority": _infer_seniority(az.get("title", "")),
-                "external_url": az.get("redirect_url", ""),
-                "source": "adzuna",
-            })
-
-        # Deduplicate within this batch
-        seen: set[tuple[str, str]] = set()
-        deduped: list[dict] = []
-        for n in normalized:
-            key = (n["title"].lower(), n["company"].lower())
-            if key not in seen:
-                seen.add(key)
-                deduped.append(n)
-
-        # Skip already-stored external_ids
-        ext_ids = [n["external_id"] for n in deduped]
-        existing = {
-            row[0]
-            for row in (await db.execute(select(Job.external_id).where(Job.external_id.in_(ext_ids)))).all()
-        }
-        new_data = [n for n in deduped if n["external_id"] not in existing]
-        if not new_data:
-            continue
-
-        # Embed in batches of 10
-        embed_texts = [f"{j['title']} at {j['company']}. {j['description']}"[:8000] for j in new_data]
-        all_embeddings: list[list[float] | None] = []
-        for i in range(0, len(embed_texts), 10):
-            batch = embed_texts[i: i + 10]
-            results_batch = await asyncio.gather(*[get_embedding(t) for t in batch], return_exceptions=True)
-            for emb in results_batch:
-                all_embeddings.append(emb if not isinstance(emb, Exception) else None)
-
-        for job_data, emb in zip(new_data, all_embeddings):
-            db.add(Job(
-                title=job_data["title"],
-                company=job_data["company"],
-                location=job_data["location"],
-                description=job_data["description"],
-                salary_range=job_data["salary_range"],
-                department=job_data["department"],
-                seniority=job_data["seniority"],
-                external_url=job_data["external_url"],
-                external_id=job_data["external_id"],
-                source="adzuna",
-                embedding=emb,
-            ))
-            total_inserted += 1
-
-        await db.commit()
-        print(f"[Adzuna Seed] '{kw}' → {len(new_data)} new jobs stored")
-
+        inserted = await fetch_store_keyword(db, kw, country, pages=1)
+        total_inserted += len(inserted)
     return total_inserted

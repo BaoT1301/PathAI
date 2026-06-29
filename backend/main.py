@@ -65,7 +65,11 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS external_id VARCHAR(255)",
             "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS external_url TEXT",
             "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_summary TEXT",
+            "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_min_value INTEGER",
+            "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_max_value INTEGER",
+            "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS resume_embedding vector(1536)",
             "CREATE INDEX IF NOT EXISTS ix_jobs_external_id ON jobs (external_id)",
+            "CREATE INDEX IF NOT EXISTS ix_jobs_salary_max ON jobs (salary_max_value)",
             # HNSW vector index — O(log n) approximate nearest-neighbour search.
             # Handles 500k+ jobs without sequential scan degradation.
             "CREATE INDEX IF NOT EXISTS ix_jobs_embedding_hnsw ON jobs USING hnsw (embedding vector_cosine_ops)",
@@ -91,15 +95,96 @@ async def lifespan(app: FastAPI):
         dupes = dedup_result.rowcount
         if dupes:
             print(f"[Startup] Removed {dupes} duplicate jobs from DB")
-    # Seed real jobs in the background so the browse page has content immediately
+    # Seed real jobs in the background so the browse page has content immediately,
+    # then keep a periodic live-feed refresh running. Salary backfill also runs
+    # here so it never blocks the server from becoming ready.
     import asyncio as _asyncio
     from database import async_session as _async_session
+
     async def _seed():
+        # Backfill numeric salary columns for rows stored before they existed.
+        await _backfill_salary_values()
         async with _async_session() as session:
             n = await seed_jobs_from_adzuna(session)
             print(f"[Startup] Seed complete — {n} new jobs added")
+
     _asyncio.ensure_future(_seed())
-    yield
+    feed_task = _asyncio.ensure_future(_live_feed_refresher())
+    try:
+        yield
+    finally:
+        feed_task.cancel()
+
+
+async def _backfill_salary_values():
+    """One-time-ish backfill: populate salary_min_value/salary_max_value for jobs
+    that have a display salary but no parsed numeric values yet."""
+    import sqlalchemy
+    from database import async_session
+    from services.adzuna_client import parse_salary_range
+
+    async with async_session() as session:
+        rows = (await session.execute(
+            select(Job.id, Job.salary_range).where(
+                Job.salary_min_value.is_(None),
+                Job.salary_range.is_not(None),
+                Job.salary_range != "Competitive",
+            )
+        )).all()
+        updated = 0
+        for job_id, salary_range in rows:
+            lo, hi = parse_salary_range(salary_range)
+            if lo is None and hi is None:
+                continue
+            await session.execute(
+                sqlalchemy.update(Job).where(Job.id == job_id).values(
+                    salary_min_value=lo, salary_max_value=hi
+                )
+            )
+            updated += 1
+        if updated:
+            await session.commit()
+            print(f"[Startup] Backfilled salary values for {updated} jobs")
+
+
+# Rotating keyword set powers the live feed — one keyword per tick keeps us well
+# within Adzuna's free-tier daily request budget.
+_LIVE_FEED_KEYWORDS = [
+    "software engineer", "data scientist", "product manager", "frontend developer",
+    "backend developer", "machine learning engineer", "devops engineer",
+    "marketing manager", "financial analyst", "UX designer",
+]
+_LIVE_FEED_INTERVAL_SECONDS = 1800  # 30 min → ~48 requests/day
+
+
+async def _live_feed_refresher():
+    """Periodically fetch fresh jobs for a rotating keyword and broadcast any
+    genuinely new ones to connected WebSocket clients. This is what makes the
+    'live feed' actually live rather than decorative."""
+    import asyncio
+    from database import async_session
+    from services.adzuna_client import fetch_store_keyword
+
+    idx = 0
+    # Small initial delay so startup seeding finishes first.
+    await asyncio.sleep(60)
+    while True:
+        keyword = _LIVE_FEED_KEYWORDS[idx % len(_LIVE_FEED_KEYWORDS)]
+        idx += 1
+        try:
+            async with async_session() as session:
+                new_jobs = await fetch_store_keyword(session, keyword, pages=1)
+            # Broadcast at most a handful per tick to avoid flooding the UI.
+            for job in new_jobs[:5]:
+                await manager.broadcast({
+                    "type": "new_job",
+                    "job": JobResponse.model_validate(job).model_dump(),
+                })
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            print(f"[LiveFeed] refresh error: {e}")
+        await asyncio.sleep(_LIVE_FEED_INTERVAL_SECONDS)
 
 
 app = FastAPI(title="Personalized Career Site API", lifespan=lifespan)
@@ -130,9 +215,9 @@ async def list_jobs(
     seniority: str | None = None,
     location: str | None = None,
     search: str | None = None,
+    salary_min: int | None = Query(None, ge=0),
 ):
     # Build a deduplicating subquery: one row per unique (title, company)
-    import sqlalchemy
     dedup_sub = (
         select(Job.id)
         .distinct(func.lower(Job.title), func.lower(Job.company))
@@ -150,15 +235,20 @@ async def list_jobs(
         base_filter.append(Job.location.ilike(f"%{location}%"))
     if search:
         base_filter.append(Job.title.ilike(f"%{search}%") | Job.description.ilike(f"%{search}%"))
+    if salary_min:
+        # Show jobs whose upper salary bound meets the requested minimum.
+        # Jobs without a published salary are excluded while this filter is active.
+        base_filter.append(Job.salary_max_value >= salary_min)
 
     count_query = select(func.count()).select_from(Job).where(*base_filter)
     total_result = await db.execute(count_query)
     total = total_result.scalar()
 
+    # Stable, deterministic ordering so pagination never repeats or drops jobs.
     query = (
         select(Job)
         .where(*base_filter)
-        .order_by(func.random())
+        .order_by(Job.posted_date.desc(), Job.id)
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
@@ -215,7 +305,14 @@ async def get_job_match_score(
     if job.embedding is None:
         raise HTTPException(status_code=422, detail="Job not indexed yet")
 
-    resume_embedding = await get_embedding(user_profile.resume_summary)
+    # Reuse the cached resume embedding; only fall back to embedding the summary
+    # (and cache it) for profiles saved before embeddings were stored.
+    if user_profile.resume_embedding is not None:
+        resume_embedding = list(user_profile.resume_embedding)
+    else:
+        resume_embedding = await get_embedding(user_profile.resume_summary)
+        user_profile.resume_embedding = resume_embedding
+        await db.commit()
 
     dist_result = await db.execute(
         select(Job.embedding.cosine_distance(resume_embedding).label("dist"))
@@ -244,9 +341,7 @@ async def get_job_summary(request: Request, job_id: str, db: AsyncSession = Depe
         return json.loads(job.ai_summary)
 
     # Generate via GPT
-    from openai import AsyncOpenAI
-    from config import OPENAI_API_KEY
-    client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+    from services.openai_client import client
     prompt = f"""Analyze this job posting and return a JSON object with exactly these keys:
 - "required_skills": list of up to 8 specific technical/professional skills required (strings)
 - "nice_to_have": list of up to 4 bonus skills mentioned (strings, empty if none)
@@ -349,15 +444,21 @@ async def upload_resume(
         if isinstance(gap, dict):
             skill_gaps[str(job["id"])] = SkillGap(**gap)
 
-    # Persist resume summary to user profile if authenticated
+    # Persist resume summary + embedding to user profile if authenticated.
+    # Caching the embedding here means per-job match scores never re-embed.
     if user:
         from datetime import timezone as _tz
         existing_profile = await db.get(UserProfile, user["sub"])
         if existing_profile:
             existing_profile.resume_summary = profile.summary
+            existing_profile.resume_embedding = resume_embedding
             existing_profile.updated_at = datetime.now(_tz.utc)
         else:
-            db.add(UserProfile(user_id=user["sub"], resume_summary=profile.summary))
+            db.add(UserProfile(
+                user_id=user["sub"],
+                resume_summary=profile.summary,
+                resume_embedding=resume_embedding,
+            ))
         await db.commit()
 
     return ResumeUploadResponse(
@@ -417,8 +518,7 @@ async def generate_cover_letter(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
-    from openai import AsyncOpenAI
-    from config import OPENAI_API_KEY
+    from services.openai_client import client as openai
 
     result = await db.execute(select(Job).where(Job.id == job_id))
     job = result.scalar_one_or_none()
@@ -432,7 +532,6 @@ async def generate_cover_letter(
         if saved_profile and saved_profile.resume_summary:
             resume_summary = saved_profile.resume_summary
 
-    openai = AsyncOpenAI(api_key=OPENAI_API_KEY)
     prompt = (
         f"Write a concise, professional cover letter for the following job.\n\n"
         f"Job Title: {job.title}\n"
@@ -464,27 +563,21 @@ async def salary_insights(job_id: str, db: AsyncSession = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Get all jobs in same dept/seniority for market comparison
+    # Get numeric salary bounds for peers in the same dept/seniority.
     peer_result = await db.execute(
-        select(Job.salary_range).where(
+        select(Job.salary_min_value, Job.salary_max_value).where(
             Job.department == job.department,
             Job.seniority == job.seniority,
+            Job.salary_min_value.is_not(None),
+            Job.salary_max_value.is_not(None),
         )
     )
-    peer_salaries = [row[0] for row in peer_result.all()]
-
-    def parse_salary(s: str) -> tuple[int, int] | None:
-        import re
-        nums = re.findall(r"[\d,]+", s.replace("k", "000").replace("K", "000"))
-        nums = [int(n.replace(",", "")) for n in nums if n]
-        if len(nums) >= 2:
-            return nums[0], nums[1]
-        if len(nums) == 1:
-            return nums[0], nums[0]
-        return None
-
-    parsed = [parse_salary(s) for s in peer_salaries if parse_salary(s)]
-    target = parse_salary(job.salary_range)
+    parsed = [(lo, hi) for lo, hi in peer_result.all()]
+    target = (
+        (job.salary_min_value, job.salary_max_value)
+        if job.salary_min_value is not None and job.salary_max_value is not None
+        else None
+    )
 
     if not parsed or not target:
         return {"min": None, "max": None, "median": None, "percentile": None, "negotiation_tip": None}
