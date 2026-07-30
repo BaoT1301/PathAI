@@ -9,8 +9,8 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import engine, get_db, Base
-from models import Job, Application, JobAlert, SavedJob, UserProfile
-from schemas import JobResponse, JobListResponse, ResumeUploadResponse, ApplicationCreate, ApplicationUpdate, ApplicationResponse, InterviewPrepRequest, InterviewPrepResponse, InterviewQuestion, JobAlertCreate, JobAlertResponse, CoverLetterRequest, CoverLetterResponse, SavedJobResponse, SavedResumeResponse, JobCreateRequest
+from models import Job, Application, JobAlert, SavedJob, UserProfile, JobEvent
+from schemas import JobResponse, JobListResponse, ResumeUploadResponse, ApplicationCreate, ApplicationUpdate, ApplicationResponse, InterviewPrepRequest, InterviewPrepResponse, InterviewQuestion, JobAlertCreate, JobAlertResponse, CoverLetterRequest, CoverLetterResponse, SavedJobResponse, SavedResumeResponse, JobCreateRequest, JobEventCreate
 from services.embedding import get_embedding
 from services.resume_parser import extract_text, parse_resume
 from services.matching import get_matched_jobs
@@ -993,3 +993,26 @@ async def get_saved_status(
         select(SavedJob).where(SavedJob.user_id == user["sub"], SavedJob.job_id == job_id)
     )
     return {"saved": result.scalar_one_or_none() is not None}
+
+
+# ─────────────────────────────────────────────
+# Feedback events (implicit signals for personalized ranking)
+# ─────────────────────────────────────────────
+
+ALLOWED_EVENT_TYPES = {"viewed", "clicked", "saved", "applied", "dismissed"}
+
+
+@app.post("/api/events", status_code=201)
+async def record_event(
+    body: JobEventCreate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Record an implicit-feedback event for the signed-in user (viewed, clicked,
+    saved, applied, dismissed). These power personalized ranking. Meant to be
+    fired-and-forgotten from the client; a failure here must never block the UI."""
+    if body.event_type not in ALLOWED_EVENT_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid event_type")
+    db.add(JobEvent(user_id=user["sub"], job_id=body.job_id, event_type=body.event_type))
+    await db.commit()
+    return {"ok": True}

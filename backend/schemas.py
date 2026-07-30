@@ -168,3 +168,10 @@ class JobAlertResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# --- Feedback / events schemas ---
+
+class JobEventCreate(BaseModel):
+    job_id: UUID
+    event_type: str  # viewed | clicked | saved | applied | dismissed
