@@ -256,7 +256,24 @@ async def list_jobs(
             resume_embedding = list(profile.resume_embedding)
 
     if resume_embedding is not None:
-        from services.matching import _normalize_score
+        from services.matching import (
+            _normalize_score,
+            get_user_preferences,
+            preference_boost,
+            explain_match,
+        )
+
+        # Personalization from implicit feedback (job_events): nudge the score
+        # toward the kinds of roles this user engages with, and attach short
+        # "why" hints. Fully defensive: any failure leaves the base ranking
+        # untouched. Pagination stays cosine-ordered, so page membership and
+        # has_next are unaffected; personalization only re-orders within the page.
+        prefs: dict = {}
+        try:
+            if user:
+                prefs = await get_user_preferences(db, user["sub"])
+        except Exception:
+            prefs = {}
 
         distance = Job.embedding.cosine_distance(resume_embedding)
         query = (
@@ -275,7 +292,19 @@ async def list_jobs(
                 resp.match_score = _normalize_score(
                     cosine_sim, [], f"{job.title} {job.description}"
                 )
+            if prefs and resp.match_score is not None:
+                boosted = resp.match_score + preference_boost(
+                    prefs, job.department, job.seniority
+                )
+                resp.match_score = round(min(100.0, max(0.0, boosted)), 1)
+                resp.match_reasons = explain_match(prefs, job.department, job.seniority)
             job_responses.append(resp)
+
+        if prefs:
+            job_responses.sort(
+                key=lambda r: r.match_score if r.match_score is not None else -1.0,
+                reverse=True,
+            )
     else:
         query = (
             select(Job)

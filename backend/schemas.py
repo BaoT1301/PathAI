@@ -52,6 +52,7 @@ class JobResponse(BaseModel):
     external_url: str | None = None
     source: str = "internal"
     applicant_count: int = 0
+    match_reasons: list[str] = []  # short "why this matched" hints (personalized feed)
 
     model_config = {"from_attributes": True}
 

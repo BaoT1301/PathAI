@@ -1,7 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from pgvector.sqlalchemy import Vector
-from models import Job
+from models import Job, JobEvent
 from schemas import ResumeProfile
 
 # Maps resume domain → relevant job departments.
@@ -122,3 +122,68 @@ async def get_matched_jobs(
         jobs.append(job_dict)
 
     return jobs, total, seniority_relaxed
+
+
+# ─────────────────────────────────────────────
+# Personalization from implicit feedback (job_events)
+# ─────────────────────────────────────────────
+
+# How much each interaction says about intent.
+_EVENT_WEIGHTS = {
+    "applied": 3.0,
+    "saved": 2.0,
+    "clicked": 1.0,
+    "viewed": 0.3,
+    "dismissed": -2.0,
+}
+
+
+async def get_user_preferences(db: AsyncSession, user_id: str) -> dict:
+    """Aggregate a user's recent job events into lightweight department and
+    seniority affinities, normalized to roughly [-1, 1]. Used to nudge ranking
+    toward the kinds of roles they actually engage with. Returns {} if no signal."""
+    rows = (
+        await db.execute(
+            select(Job.department, Job.seniority, JobEvent.event_type)
+            .join(Job, Job.id == JobEvent.job_id)
+            .where(JobEvent.user_id == user_id)
+            .order_by(JobEvent.created_at.desc())
+            .limit(300)
+        )
+    ).all()
+
+    dept: dict[str, float] = {}
+    sen: dict[str, float] = {}
+    for department, seniority, etype in rows:
+        w = _EVENT_WEIGHTS.get(etype, 0.0)
+        if department:
+            dept[department] = dept.get(department, 0.0) + w
+        if seniority:
+            sen[seniority] = sen.get(seniority, 0.0) + w
+
+    def _norm(d: dict[str, float]) -> dict[str, float]:
+        peak = max((abs(v) for v in d.values()), default=0.0)
+        return {k: v / peak for k, v in d.items()} if peak > 0 else {}
+
+    return {"dept": _norm(dept), "seniority": _norm(sen)}
+
+
+def preference_boost(prefs: dict, department: str | None, seniority: str | None) -> float:
+    """Bounded score nudge (about +/- 8 points) from a user's affinities."""
+    boost = 0.0
+    if department:
+        boost += prefs.get("dept", {}).get(department, 0.0) * 6.0
+    if seniority:
+        boost += prefs.get("seniority", {}).get(seniority, 0.0) * 2.0
+    return max(-8.0, min(8.0, boost))
+
+
+def explain_match(prefs: dict, department: str | None, seniority: str | None) -> list[str]:
+    """Up to two short, honest reasons a job is surfaced for this user."""
+    reasons: list[str] = []
+    if department and prefs.get("dept", {}).get(department, 0.0) > 0.4:
+        pretty = department.replace("_", " ").title()
+        reasons.append(f"In {pretty}, a field you engage with")
+    if seniority and prefs.get("seniority", {}).get(seniority, 0.0) > 0.4:
+        reasons.append(f"Matches your {seniority} focus")
+    return reasons[:2]
