@@ -13,6 +13,13 @@ ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
+# Startup behavior flags (default OFF = non-destructive boots). Ingestion should
+# run as a scheduled job (see ingest.py), not on every web-process start.
+# - SEED_ON_START: run the Adzuna seed on boot (useful for a fresh/empty DB).
+# - RESET_JOBS_ON_START: run the delete-internal + de-dup cleanup on boot.
+SEED_ON_START = os.getenv("SEED_ON_START", "false").lower() == "true"
+RESET_JOBS_ON_START = os.getenv("RESET_JOBS_ON_START", "false").lower() == "true"
+
 # Startup validation — warn loudly if critical env vars are missing
 _required = {
     "DATABASE_URL": DATABASE_URL,

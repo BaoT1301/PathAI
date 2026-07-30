@@ -20,7 +20,7 @@ from services.skill_gap import analyze_skill_gap
 from services.interview_coach import generate_interview_prep
 from services.adzuna_client import fetch_and_store_adzuna_jobs, seed_jobs_from_adzuna
 from auth import get_current_user, get_current_user_soft, require_auth
-from config import FRONTEND_URL, OPENAI_MODEL
+from config import FRONTEND_URL, OPENAI_MODEL, SEED_ON_START, RESET_JOBS_ON_START
 import json
 
 limiter = Limiter(key_func=get_remote_address)
@@ -86,38 +86,45 @@ async def lifespan(app: FastAPI):
             "CREATE INDEX IF NOT EXISTS ix_jobs_seniority ON jobs (seniority)",
         ]:
             await conn.execute(sqlalchemy.text(stmt))
-        # Remove all mock/seed jobs — only keep real jobs from external sources
-        result = await conn.execute(sqlalchemy.text(
-            "DELETE FROM jobs WHERE source = 'internal' OR source IS NULL"
-        ))
-        deleted = result.rowcount
-        if deleted:
-            print(f"[Startup] Removed {deleted} mock/internal jobs from DB")
-        # Remove duplicate jobs — keep only the first inserted per (title, company)
-        dedup_result = await conn.execute(sqlalchemy.text("""
-            DELETE FROM jobs WHERE id NOT IN (
-                SELECT DISTINCT ON (LOWER(title), LOWER(company)) id
-                FROM jobs
-                ORDER BY LOWER(title), LOWER(company), posted_date DESC
-            )
-        """))
-        dupes = dedup_result.rowcount
-        if dupes:
-            print(f"[Startup] Removed {dupes} duplicate jobs from DB")
+        # Destructive cleanup is OFF by default so normal deploys never churn the
+        # jobs table. Enable RESET_JOBS_ON_START to run it (the feed also de-dups
+        # at query time, so duplicates in the table are hidden regardless).
+        if RESET_JOBS_ON_START:
+            result = await conn.execute(sqlalchemy.text(
+                "DELETE FROM jobs WHERE source = 'internal' OR source IS NULL"
+            ))
+            deleted = result.rowcount
+            if deleted:
+                print(f"[Startup] Removed {deleted} mock/internal jobs from DB")
+            dedup_result = await conn.execute(sqlalchemy.text("""
+                DELETE FROM jobs WHERE id NOT IN (
+                    SELECT DISTINCT ON (LOWER(title), LOWER(company)) id
+                    FROM jobs
+                    ORDER BY LOWER(title), LOWER(company), posted_date DESC
+                )
+            """))
+            dupes = dedup_result.rowcount
+            if dupes:
+                print(f"[Startup] Removed {dupes} duplicate jobs from DB")
     # Seed real jobs in the background so the browse page has content immediately,
     # then keep a periodic live-feed refresh running. Salary backfill also runs
     # here so it never blocks the server from becoming ready.
     import asyncio as _asyncio
     from database import async_session as _async_session
 
-    async def _seed():
-        # Backfill numeric salary columns for rows stored before they existed.
+    async def _startup_bg():
+        # Backfill numeric salary columns for rows stored before they existed
+        # (safe/idempotent: only fills NULLs).
         await _backfill_salary_values()
-        async with _async_session() as session:
-            n = await seed_jobs_from_adzuna(session)
-            print(f"[Startup] Seed complete — {n} new jobs added")
+        # Ingestion no longer runs on every boot by default. Schedule ingest.py
+        # as a cron/worker instead. Set SEED_ON_START=true to seed on boot
+        # (e.g. for a fresh/empty database).
+        if SEED_ON_START:
+            async with _async_session() as session:
+                n = await seed_jobs_from_adzuna(session)
+                print(f"[Startup] Seed complete — {n} new jobs added")
 
-    _asyncio.ensure_future(_seed())
+    _asyncio.ensure_future(_startup_bg())
     feed_task = _asyncio.ensure_future(_live_feed_refresher())
     try:
         yield
