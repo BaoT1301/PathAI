@@ -1,3 +1,5 @@
+import logging
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI, Depends, Query, Request, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect
@@ -9,7 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import engine, get_db, Base
-from models import Job, Application, JobAlert, SavedJob, UserProfile, JobEvent
+from models import Job, Application, JobAlert, SavedJob, UserProfile, JobEvent, AiUsage
 from schemas import JobResponse, JobListResponse, ResumeUploadResponse, ApplicationCreate, ApplicationUpdate, ApplicationResponse, InterviewPrepRequest, InterviewPrepResponse, InterviewQuestion, JobAlertCreate, JobAlertResponse, CoverLetterRequest, CoverLetterResponse, SavedJobResponse, SavedResumeResponse, JobCreateRequest, JobEventCreate
 from services.embedding import get_embedding
 from services.resume_parser import extract_text, parse_resume
@@ -22,6 +24,13 @@ from config import FRONTEND_URL, OPENAI_MODEL
 import json
 
 limiter = Limiter(key_func=get_remote_address)
+
+# Structured logging: request latency and AI token usage both flow through this.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("pathai")
 
 
 class ConnectionManager:
@@ -204,6 +213,68 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
 )
+
+
+@app.middleware("http")
+async def _timing_middleware(request: Request, call_next):
+    """Log method, path, status and latency for every request (observability)."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "req method=%s path=%s status=%s ms=%.0f",
+        request.method, request.url.path, response.status_code, elapsed_ms,
+    )
+    return response
+
+
+def log_ai_usage(name: str, response) -> None:
+    """Log OpenAI token usage for cost visibility. Never raises."""
+    try:
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            logger.info(
+                "ai_call name=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+                name,
+                getattr(usage, "prompt_tokens", "?"),
+                getattr(usage, "completion_tokens", "?"),
+                getattr(usage, "total_tokens", "?"),
+            )
+    except Exception:
+        pass
+
+
+def ai_quota(endpoint: str, daily_limit: int):
+    """Dependency factory enforcing a per-user daily limit on an expensive AI
+    endpoint (protects the OpenAI bill). Counts the user's calls in the last 24h;
+    raises 429 when over, otherwise records this call. Returns the user dict."""
+    async def _dep(
+        db: AsyncSession = Depends(get_db),
+        user: dict = Depends(require_auth),
+    ) -> dict:
+        from datetime import timedelta, timezone
+        since = datetime.now(timezone.utc) - timedelta(days=1)
+        used = (
+            await db.execute(
+                select(func.count())
+                .select_from(AiUsage)
+                .where(
+                    AiUsage.user_id == user["sub"],
+                    AiUsage.endpoint == endpoint,
+                    AiUsage.created_at >= since,
+                )
+            )
+        ).scalar() or 0
+        if used >= daily_limit:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily limit reached for this feature ({daily_limit}/day). Try again tomorrow.",
+            )
+        db.add(AiUsage(user_id=user["sub"], endpoint=endpoint))
+        await db.commit()
+        return user
+
+    return _dep
 
 
 @app.get("/api/jobs", response_model=JobListResponse)
@@ -423,6 +494,7 @@ Return ONLY valid JSON, no markdown."""
             temperature=0.2,
             max_tokens=400,
         )
+        log_ai_usage("summary", resp)
         raw = resp.choices[0].message.content.strip()
         # Strip markdown code fences if present
         if raw.startswith("```"):
@@ -577,7 +649,7 @@ async def generate_cover_letter(
     job_id: str,
     body: CoverLetterRequest,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(ai_quota("cover-letter", 15)),
 ):
     from services.openai_client import client as openai
 
@@ -613,6 +685,7 @@ async def generate_cover_letter(
         max_tokens=500,
         temperature=0.7,
     )
+    log_ai_usage("cover-letter", response)
     return CoverLetterResponse(cover_letter=response.choices[0].message.content.strip())
 
 

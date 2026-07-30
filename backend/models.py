@@ -108,3 +108,17 @@ class JobEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+
+
+class AiUsage(Base):
+    """One row per AI-endpoint call by a signed-in user. Powers per-user daily
+    quotas (protecting the OpenAI bill) and cost visibility. Additive table;
+    created by create_all on boot."""
+    __tablename__ = "ai_usage"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[str] = mapped_column(String(255), index=True)
+    endpoint: Mapped[str] = mapped_column(String(50), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
