@@ -68,10 +68,46 @@ body {
   background: #52525b;
 }
 
-/* Landing page: dot grid background */
+/* Landing page: dot grid background â€” radial mask so it fades to texture */
 .grid-bg {
   background-image: radial-gradient(circle at 2px 2px, #e5e7eb 1px, transparent 0);
   background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+  mask-image: radial-gradient(ellipse at center, black, transparent 70%);
+}
+
+/* ------------------------------------------------------------------
+   Premium design-system utilities
+   Refined tinted depth (never neon glows) + soft accent surfaces.
+   Accent: #0051d5 (brand), #6690ff for accent text on dark surfaces.
+   ------------------------------------------------------------------ */
+
+/* Layered, softly accent-tinted card depth for light surfaces */
+.shadow-premium {
+  box-shadow:
+    0 1px 2px rgba(9, 9, 11, 0.04),
+    0 6px 16px -8px rgba(9, 9, 11, 0.10),
+    0 2px 6px -4px rgba(0, 81, 213, 0.06);
+}
+
+/* Flagship depth — deeper, still restrained */
+.shadow-premium-lg {
+  box-shadow:
+    0 1px 3px rgba(9, 9, 11, 0.05),
+    0 24px 48px -20px rgba(9, 9, 11, 0.18),
+    0 8px 24px -14px rgba(0, 81, 213, 0.10);
+}
+
+/* Soft radial accent wash — decorative hover highlight, not a glow */
+.spotlight {
+  background: radial-gradient(circle at center, rgba(0, 81, 213, 0.08), transparent 70%);
+}
+
+/* Tasteful accent lift for an active/highlighted row (subtle, not neon) */
+.glow-accent {
+  box-shadow:
+    0 0 0 1px rgba(0, 81, 213, 0.10),
+    0 10px 28px -14px rgba(0, 81, 213, 0.35);
 }
 
 /* Landing page: hero headline gradient */
@@ -108,5 +144,23 @@ body {
   animation: scroll 30s linear infinite;
   display: flex;
   width: fit-content;
+  pointer-events: none;
+}
+
+/* Lenis smooth scroll (see SmoothScroll.tsx) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-smooth iframe {
   pointer-events: none;
 }

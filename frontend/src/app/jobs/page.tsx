@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles, ArrowRight, Zap, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { X, ArrowRight, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, BarChart3, AlertTriangle, SearchX } from "lucide-react";
 import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
@@ -39,6 +39,10 @@ function formatSalary(n: number) {
   return `$${Math.round(n / 1000)}k`;
 }
 
+// Threshold above which a match score earns the single brand accent; every
+// other score reads as a quiet neutral number, not a colored pill.
+const STRONG_MATCH = 90;
+
 /* ── FeaturedJobCard ──────────────────────────────────────────── */
 
 function FeaturedJobCard({
@@ -48,20 +52,25 @@ function FeaturedJobCard({
 }) {
   const isFeatured = index === 1;
   const score = job.match_score;
+  const reduceMotion = useReducedMotion();
+  const strong = score != null && score >= STRONG_MATCH;
 
-  const badge = score != null && (
-    <div className="absolute top-0 right-0 p-4">
+  // Quiet mono readout instead of a colored "Zap % Match" pill — accent only
+  // kicks in for a genuinely strong match, otherwise it's a neutral number.
+  const scoreReadout = score != null && (
+    <div className="absolute top-4 right-4 text-right leading-none pointer-events-none">
       <div
-        className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+        className={`font-mono text-lg font-semibold tabular-nums ${
           isFeatured
-            ? "bg-[#0051d5] text-white"
-            : score >= 90
-            ? "bg-[#316bf3] text-white"
-            : "bg-[#0051d5]/10 text-[#0051d5] border border-[#0051d5]/20"
+            ? strong ? "text-white" : "text-white/50"
+            : strong ? "text-[#0051d5] dark:text-[#6690ff]" : "text-neutral-400 dark:text-neutral-500"
         }`}
       >
-        <Zap className="w-3 h-3" />
-        {Math.round(score)}% Match
+        {Math.round(score)}
+        <span className="text-[11px] font-normal opacity-60">%</span>
+      </div>
+      <div className={`text-[9px] font-semibold uppercase tracking-widest mt-0.5 ${isFeatured ? "text-white/40" : "text-neutral-400 dark:text-neutral-600"}`}>
+        Match
       </div>
     </div>
   );
@@ -71,33 +80,35 @@ function FeaturedJobCard({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        whileHover={reduceMotion ? undefined : { y: -4 }}
         transition={{ duration: 0.4, delay: index * 0.08 }}
-        className="relative bg-neutral-950 text-white p-6 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col"
+        className="group relative bg-neutral-950 text-white p-6 rounded-xl shadow-premium-lg transition-shadow duration-300 flex flex-col overflow-hidden"
       >
-        {badge}
-        <div className="flex items-start gap-4 mb-6">
-          <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
-          <div className={`min-w-0 ${score != null ? "pr-20" : ""}`}>
-            <h3 className="font-bold text-lg leading-snug line-clamp-2">{job.title}</h3>
+        <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        {scoreReadout}
+        <div className="relative flex items-start gap-4 mb-6">
+          <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-premium" />
+          <div className={`min-w-0 ${score != null ? "pr-16" : ""}`}>
+            <h3 className="font-semibold text-lg leading-snug line-clamp-2">{job.title}</h3>
             <p className="text-white/70 text-xs font-medium mt-0.5">
               {job.company} • {job.location}
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap content-start gap-2 mb-6 flex-1">
+        <div className="relative flex flex-wrap content-start gap-2 mb-6 flex-1">
           {job.salary_range && (
-            <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+            <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-semibold tabular-nums uppercase">
               {job.salary_range}
             </span>
           )}
-          <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+          <span className="bg-white/10 text-white/70 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold uppercase">
             {formatDept(job.department)}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="relative flex gap-2">
           <Link
             href={`/jobs/${job.id}`}
-            className="flex-1 bg-white text-black py-2 rounded-lg text-sm font-bold text-center active:scale-95 transition-transform"
+            className="flex-1 bg-white text-black py-2 rounded-lg text-sm font-semibold text-center active:scale-95 transition-transform"
           >
             Apply Fast
           </Link>
@@ -120,14 +131,16 @@ function FeaturedJobCard({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.4, delay: index * 0.08 }}
-      className="relative bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.06)] hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden"
+      className="group relative bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-premium hover:shadow-premium-lg border border-transparent hover:border-[#0051d5]/20 dark:hover:border-[#0051d5]/30 transition-[box-shadow,border-color] duration-300 flex flex-col overflow-hidden"
     >
-      {badge}
-      <div className="flex items-start gap-4 mb-6">
-        <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-sm" />
-        <div className="min-w-0 pr-20">
-          <h3 className="font-bold text-lg leading-snug text-neutral-950 dark:text-white line-clamp-2">
+      <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {scoreReadout}
+      <div className="relative flex items-start gap-4 mb-6">
+        <CompanyLogo company={job.company} className="w-12 h-12 rounded-xl text-base shadow-premium" />
+        <div className="min-w-0 pr-16">
+          <h3 className="font-semibold text-lg leading-snug text-neutral-950 dark:text-white line-clamp-2">
             {job.title}
           </h3>
           <p className="text-neutral-500 dark:text-neutral-400 text-xs font-medium mt-0.5">
@@ -135,22 +148,22 @@ function FeaturedJobCard({
           </p>
         </div>
       </div>
-      <div className="flex flex-wrap content-start gap-2 mb-6 flex-1">
+      <div className="relative flex flex-wrap content-start gap-2 mb-6 flex-1">
         {job.salary_range && (
-          <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+          <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-semibold tabular-nums uppercase">
             {job.salary_range}
           </span>
         )}
-        <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-bold uppercase">
+        <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold uppercase">
           {formatDept(job.department)}
         </span>
       </div>
-      <div className="flex gap-2">
+      <div className="relative flex gap-2">
         <Link
           href={`/jobs/${job.id}`}
-          className="flex-1 text-neutral-950 dark:text-white font-bold text-sm flex items-center justify-center gap-1 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+          className="flex-1 text-neutral-950 dark:text-white font-semibold text-sm flex items-center justify-center gap-1 py-2 border border-neutral-200 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
         >
-          View Details <ArrowRight className="w-3.5 h-3.5" />
+          View Details <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.75} />
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
@@ -175,18 +188,29 @@ function JobListRow({
   job: Job; index: number; isSaved: boolean; onBookmark: (id: string) => void;
 }) {
   const score = job.match_score;
+  const reduceMotion = useReducedMotion();
+  const strong = score != null && score >= STRONG_MATCH;
+  const router = useRouter();
+
+  const open = () => router.push(`/jobs/${job.id}`);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
-      className="group flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-all duration-200 border-b border-neutral-200 dark:border-neutral-800 last:border-0"
+      onClick={open}
+      role="link"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") open(); }}
+      className="group relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-neutral-900 shadow-premium hover:shadow-premium-lg border border-neutral-200/70 dark:border-neutral-800 hover:border-[#0051d5]/25 dark:hover:border-[#0051d5]/35 transition-[box-shadow,border-color] duration-300 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0051d5]/40"
     >
-      <div className="flex gap-4 items-center">
-        <CompanyLogo company={job.company} className="w-10 h-10 rounded-lg shadow-sm text-sm" />
+      <div className="spotlight pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="relative flex gap-4 items-center">
+        <CompanyLogo company={job.company} className="w-10 h-10 rounded-lg shadow-premium text-sm" />
         <div>
-          <h4 className="font-bold text-base text-neutral-950 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-blue-400 transition-colors">
+          <h4 className="font-semibold text-base text-neutral-950 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-[#6690ff] transition-colors">
             {job.title}
           </h4>
           <div className="flex gap-2 text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
@@ -196,13 +220,13 @@ function JobListRow({
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-4 mt-4 md:mt-0">
+      <div className="relative flex items-center gap-4 mt-4 md:mt-0">
         {score != null && (
-          <div className="flex flex-col items-end">
-            <span className="text-[0.6rem] font-bold text-[#0051d5] uppercase tracking-widest">
+          <div className="flex flex-col items-end leading-none">
+            <span className="text-[0.6rem] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-1">
               Match Score
             </span>
-            <span className="text-sm font-bold text-neutral-950 dark:text-white">
+            <span className={`font-mono text-sm font-semibold tabular-nums ${strong ? "text-[#0051d5] dark:text-[#6690ff]" : "text-neutral-900 dark:text-white"}`}>
               {Math.round(score)}%
             </span>
           </div>
@@ -217,8 +241,8 @@ function JobListRow({
             : <Bookmark className="w-4 h-4 text-neutral-400" />
           }
         </button>
-        <Link href={`/jobs/${job.id}`}>
-          <button className="bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50 px-4 py-2 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-shadow text-neutral-900 dark:text-white">
+        <Link href={`/jobs/${job.id}`} onClick={(e) => e.stopPropagation()}>
+          <button className="bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50 px-4 py-2 rounded-lg text-xs font-semibold shadow-sm hover:shadow-md transition-shadow text-neutral-900 dark:text-white">
             View
           </button>
         </Link>
@@ -250,24 +274,24 @@ function Pagination({
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
         aria-label="Previous page"
-        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
-        <ChevronLeft className="w-4 h-4 text-neutral-600" />
+        <ChevronLeft className="w-4 h-4 text-neutral-600 dark:text-neutral-400" strokeWidth={1.75} />
       </button>
 
       {getPages().map((p, i) =>
         p === "…" ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-sm text-neutral-400 select-none">
+          <span key={`ellipsis-${i}`} className="px-2 text-sm text-neutral-400 dark:text-neutral-600 select-none">
             …
           </span>
         ) : (
           <button
             key={p}
             onClick={() => onChange(Number(p))}
-            className={`w-9 h-9 rounded-lg text-sm font-black transition-all ${
+            className={`w-9 h-9 rounded-lg font-mono text-sm font-semibold tabular-nums transition-all ${
               page === p
-                ? "bg-black text-white"
-                : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+                ? "bg-black text-white dark:bg-white dark:text-black"
+                : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
             {p}
@@ -279,9 +303,9 @@ function Pagination({
         onClick={() => onChange(page + 1)}
         disabled={page === Math.ceil(total / pageSize)}
         aria-label="Next page"
-        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
-        <ChevronRight className="w-4 h-4 text-neutral-600" />
+        <ChevronRight className="w-4 h-4 text-neutral-600 dark:text-neutral-400" strokeWidth={1.75} />
       </button>
     </div>
   );
@@ -503,10 +527,10 @@ export default function JobsPage() {
                 />
                 <div className="flex justify-between mt-2 text-[0.7rem] font-medium text-neutral-500 dark:text-neutral-400">
                   <span>Any</span>
-                  <span className="text-neutral-900 dark:text-white font-bold">
+                  <span className="text-neutral-900 dark:text-white font-mono font-semibold tabular-nums">
                     {salaryMin === 0 ? "Any" : `${formatSalary(salaryMin)}+`}
                   </span>
-                  <span>$300k+</span>
+                  <span className="font-mono tabular-nums">$300k+</span>
                 </div>
               </div>
 
@@ -546,23 +570,29 @@ export default function JobsPage() {
           {/* AI Insight Widget */}
           <div className="bg-neutral-950 dark:bg-neutral-900 p-6 rounded-xl text-white">
             <div className="w-8 h-8 bg-[#0051d5]/20 rounded-lg flex items-center justify-center mb-4">
-              <Sparkles className="w-4 h-4 text-[#316bf3]" />
+              <BarChart3 className="w-4 h-4 text-[#6690ff]" strokeWidth={1.75} />
             </div>
             <p className="text-sm leading-relaxed font-medium text-white/80">
               PathAI has indexed{" "}
-              <span className="text-white font-bold">
-                {total > 0 ? `${total} jobs` : "thousands of jobs"}
+              <span className="text-white font-semibold">
+                {total > 0 ? (
+                  <>
+                    <span className="font-mono tabular-nums">{total}</span> jobs
+                  </>
+                ) : (
+                  "thousands of jobs"
+                )}
               </span>{" "}
               today.{" "}
               {total > 0 ? (
                 session?.access_token ? (
                   <>
                     Open any job to see your{" "}
-                    <span className="text-[#b4c5ff]">personalized match score</span>.
+                    <span className="text-[#6690ff]">personalized match score</span>.
                   </>
                 ) : (
                   <>
-                    <span className="text-[#b4c5ff]">Sign in</span> and upload your resume to unlock match scores.
+                    <span className="text-[#6690ff]">Sign in</span> and upload your resume to unlock match scores.
                   </>
                 )
               ) : (
@@ -626,10 +656,10 @@ export default function JobsPage() {
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-32 gap-3"
             >
-              <div className="w-16 h-16 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-2xl">
-                ⚠️
+              <div className="w-16 h-16 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-500 dark:text-red-400" strokeWidth={1.75} />
               </div>
-              <p className="text-lg font-bold">Couldn&apos;t reach the server</p>
+              <p className="text-lg font-semibold">Couldn&apos;t reach the server</p>
               <p className="text-sm text-neutral-400 text-center max-w-xs">
                 The job service isn&apos;t responding. It may be starting up or temporarily down.
               </p>
@@ -646,10 +676,10 @@ export default function JobsPage() {
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-32 gap-3"
             >
-              <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-2xl">
-                🔍
+              <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                <SearchX className="w-6 h-6 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               </div>
-              <p className="text-lg font-bold">No positions found</p>
+              <p className="text-lg font-semibold">No positions found</p>
               <p className="text-sm text-neutral-400">Try adjusting your filters</p>
               {hasFilters && (
                 <button
@@ -676,7 +706,7 @@ export default function JobsPage() {
                     </div>
                     <a
                       href="#recent"
-                      className="text-[#0051d5] dark:text-blue-400 font-semibold text-sm hover:underline underline-offset-4 hidden sm:block"
+                      className="text-[#0051d5] dark:text-[#6690ff] font-semibold text-sm hover:underline underline-offset-4 hidden sm:block"
                     >
                       Browse All Matches
                     </a>
@@ -704,7 +734,7 @@ export default function JobsPage() {
                     </h2>
                     <div className="h-[2px] flex-1 bg-neutral-200 dark:bg-neutral-800" />
                   </div>
-                  <div>
+                  <div className="space-y-3">
                     {listJobs.map((job, i) => (
                       <JobListRow
                         key={job.id}
@@ -733,7 +763,7 @@ export default function JobsPage() {
       <footer className="bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800">
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 max-w-[1440px] mx-auto gap-8">
           <div className="flex flex-col items-center md:items-start gap-4">
-            <span className="text-lg font-black text-neutral-950 dark:text-white uppercase tracking-tighter">
+            <span className="text-lg font-semibold text-neutral-950 dark:text-white uppercase tracking-tighter">
               PathAI
             </span>
             <p className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-600">

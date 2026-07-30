@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Navigation, Mail, Lock, ArrowRight, Loader2, RotateCcw } from "lucide-react";
+import { Mail, Lock, ArrowRight, Loader2, RotateCcw } from "lucide-react";
+import { PathMark } from "@/components/Logo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -72,7 +73,7 @@ export default function AuthPage() {
         {/* Logo */}
         <Link href="/" className="relative z-10 inline-flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-            <Navigation className="text-black" size={18} />
+            <PathMark className="w-[18px] h-[18px] text-black" />
           </div>
           <span className="text-xl font-black text-white tracking-tight">
             Path<span className="text-[#0051d5]">AI</span>
@@ -137,7 +138,7 @@ export default function AuthPage() {
           {/* Mobile logo */}
           <Link href="/" className="lg:hidden inline-flex items-center gap-3 mb-12">
             <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center">
-              <Navigation className="text-white" size={16} />
+              <PathMark className="w-4 h-4 text-white" />
             </div>
             <span className="text-xl font-black tracking-tight">
               Path<span className="text-[#0051d5]">AI</span>

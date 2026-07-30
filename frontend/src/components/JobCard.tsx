@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
   MapPin,
@@ -11,11 +11,12 @@ import {
   CheckCircle2,
   Loader2,
   GraduationCap,
-  Building2,
   ExternalLink,
   ChevronDown,
-  Sparkles,
-  Zap,
+  Check,
+  Tag,
+  ListChecks,
+  Globe,
   Users,
   Briefcase,
   Bookmark,
@@ -27,24 +28,20 @@ import { useAuth } from "@/context/AuthContext";
 import InterviewCoach from "./InterviewCoach";
 import CoverLetter from "./CoverLetter";
 import SalaryInsights from "./SalaryInsights";
+import CompanyLogo from "./CompanyLogo";
 
-const DEPT_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  engineering:  { bg: "bg-violet-50 dark:bg-violet-900/30",  text: "text-violet-700 dark:text-violet-300",  border: "border-violet-200 dark:border-violet-700"  },
-  data_science: { bg: "bg-indigo-50 dark:bg-indigo-900/30",  text: "text-indigo-700 dark:text-indigo-300",  border: "border-indigo-200 dark:border-indigo-700"  },
-  product:      { bg: "bg-sky-50 dark:bg-sky-900/30",        text: "text-sky-700 dark:text-sky-300",        border: "border-sky-200 dark:border-sky-700"        },
-  design:       { bg: "bg-pink-50 dark:bg-pink-900/30",      text: "text-pink-700 dark:text-pink-300",      border: "border-pink-200 dark:border-pink-700"      },
-  marketing:    { bg: "bg-orange-50 dark:bg-orange-900/30",  text: "text-orange-700 dark:text-orange-300",  border: "border-orange-200 dark:border-orange-700"  },
-  sales:        { bg: "bg-teal-50 dark:bg-teal-900/30",      text: "text-teal-700 dark:text-teal-300",      border: "border-teal-200 dark:border-teal-700"      },
-  finance:      { bg: "bg-emerald-50 dark:bg-emerald-900/30",text: "text-emerald-700 dark:text-emerald-300",border: "border-emerald-200 dark:border-emerald-700" },
-  hr:           { bg: "bg-rose-50 dark:bg-rose-900/30",      text: "text-rose-700 dark:text-rose-300",      border: "border-rose-200 dark:border-rose-700"      },
-  operations:   { bg: "bg-slate-50 dark:bg-slate-800",       text: "text-slate-700 dark:text-slate-300",    border: "border-slate-200 dark:border-slate-600"    },
-  healthcare:   { bg: "bg-red-50 dark:bg-red-900/30",        text: "text-red-700 dark:text-red-300",        border: "border-red-200 dark:border-red-700"        },
+// Department is shown as a single neutral category chip. We deliberately avoid a
+// per-department rainbow (an AI-tell of "too many competing accents") and commit
+// to one brand accent (#0051d5), surfaced as a small dot on the chip instead.
+const DEPT_CHIP = {
+  bg: "bg-gray-100 dark:bg-gray-700/60",
+  text: "text-gray-700 dark:text-gray-300",
+  border: "border-gray-200 dark:border-gray-600",
 };
-const DEPT_DEFAULT = { bg: "bg-gray-50 dark:bg-gray-700", text: "text-gray-700 dark:text-gray-300", border: "border-gray-200 dark:border-gray-600" };
 
 function scoreColor(score: number) {
   if (score >= 75) return { ring: "ring-emerald-400 dark:ring-emerald-700", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-900/30" };
-  if (score >= 50) return { ring: "ring-blue-400 dark:ring-blue-700",       text: "text-blue-600 dark:text-blue-400",       bg: "bg-blue-50 dark:bg-blue-900/30" };
+  if (score >= 50) return { ring: "ring-[#0051d5]/40 dark:ring-[#0051d5]/50", text: "text-[#0051d5] dark:text-[#6690ff]",       bg: "bg-[#0051d5]/5 dark:bg-[#0051d5]/15" };
   if (score >= 30) return { ring: "ring-amber-400 dark:ring-amber-700",     text: "text-amber-600 dark:text-amber-400",     bg: "bg-amber-50 dark:bg-amber-900/30" };
   return             { ring: "ring-gray-300 dark:ring-gray-600",            text: "text-gray-500 dark:text-gray-400",       bg: "bg-gray-50 dark:bg-gray-800" };
 }
@@ -74,7 +71,8 @@ interface JobCardProps {
 
 export default function JobCard({ job, index = 0, skillGap, initialApplicationStatus, initialSaved = false }: JobCardProps) {
   const { user, session } = useAuth();
-  const dept = DEPT_STYLES[job.department] || DEPT_DEFAULT;
+  const reduceMotion = useReducedMotion();
+  const dept = DEPT_CHIP;
   const sc = job.match_score != null ? scoreColor(job.match_score) : null;
 
   const [appStatus, setAppStatus] = useState<string | null>(initialApplicationStatus ?? null);
@@ -182,10 +180,12 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
       <motion.article
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
+        whileHover={reduceMotion ? undefined : { y: -4 }}
         transition={{ duration: 0.4, delay: index * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="group relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-xl transition-all duration-300"
+        className="group relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-premium hover:shadow-premium-lg hover:border-[#0051d5]/25 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300"
       >
-        <div className="px-5 pt-5 pb-4">
+        <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative px-5 pt-5 pb-4">
           {/* ── TOP ROW ──────────────────────────────────── */}
           <div className="flex items-start gap-4">
             {/* Score circle */}
@@ -196,10 +196,10 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                 transition={{ type: "spring", stiffness: 260, damping: 20, delay: index * 0.04 + 0.15 }}
                 className={`shrink-0 w-14 h-14 rounded-2xl ${sc.bg} ring-2 ${sc.ring} flex flex-col items-center justify-center`}
               >
-                <span className={`text-lg font-black leading-none ${sc.text}`}>
+                <span className={`font-mono text-lg font-semibold tabular-nums leading-none ${sc.text}`}>
                   {Math.round(job.match_score)}
                 </span>
-                <span className={`text-[9px] font-bold uppercase tracking-wide ${sc.text} opacity-60`}>
+                <span className={`text-[9px] font-semibold uppercase tracking-wide ${sc.text} opacity-60`}>
                   match
                 </span>
               </motion.div>
@@ -208,26 +208,27 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
             {/* Title + company + tags */}
             <div className="min-w-0 flex-1">
               <Link href={`/jobs/${job.id}`} className="group/title">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-snug group-hover/title:text-[#0051d5] transition-colors duration-200 line-clamp-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-snug group-hover/title:text-[#0051d5] transition-colors duration-200 line-clamp-2">
                   {job.title}
                 </h3>
               </Link>
               {job.company && (
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  <Building2 className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                <p className="mt-0.5 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  <CompanyLogo company={job.company} className="w-5 h-5 rounded-[5px] text-[10px]" />
                   {job.company}
                 </p>
               )}
               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-xs font-semibold border ${dept.bg} ${dept.text} ${dept.border}`}>
+                <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-0.5 text-xs font-semibold border ${dept.bg} ${dept.text} ${dept.border}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5] shrink-0" aria-hidden="true" />
                   {formatDept(job.department)}
                 </span>
                 <span className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
                   {formatSeniority(job.seniority)}
                 </span>
                 {job.source === "adzuna" && (
-                  <span className="inline-flex items-center gap-1 rounded-lg border border-blue-100 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
-                    <Zap className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-[#0051d5]/20 dark:border-[#0051d5]/40 bg-[#0051d5]/5 dark:bg-[#0051d5]/10 px-2.5 py-0.5 text-xs font-semibold text-[#0051d5] dark:text-[#6690ff]">
+                    <Globe className="w-3 h-3" strokeWidth={1.75} />
                     Adzuna
                   </span>
                 )}
@@ -241,7 +242,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
               <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               {job.location}
             </span>
-            <span className="flex items-center gap-1.5 font-semibold text-gray-700 dark:text-gray-200">
+            <span className="flex items-center gap-1.5 font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-200">
               <DollarSign className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
               {job.salary_range}
             </span>
@@ -300,8 +301,9 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                         {summary.experience_level}
                       </span>
                       {summary.highlights.slice(0, 2).map((h) => (
-                        <span key={h} className="inline-flex items-center gap-1 rounded-lg border border-[#0051d5]/20 dark:border-blue-700 bg-[#0051d5]/5 dark:bg-blue-900/30 px-2.5 py-1 text-xs font-semibold text-[#0051d5] dark:text-blue-300">
-                          ✦ {h}
+                        <span key={h} className="inline-flex items-center gap-1 rounded-lg border border-[#0051d5]/20 dark:border-[#0051d5]/40 bg-[#0051d5]/5 dark:bg-[#0051d5]/10 px-2.5 py-1 text-xs font-semibold text-[#0051d5] dark:text-[#6690ff]">
+                          <Tag className="w-3 h-3 shrink-0" strokeWidth={1.75} />
+                          {h}
                         </span>
                       ))}
                     </div>
@@ -352,12 +354,13 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {skillGap.matching_skills.map((s) => (
-                            <span key={s} className="rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-semibold">
-                              ✓ {s}
+                            <span key={s} className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-xs font-semibold">
+                              <Check className="w-3 h-3 shrink-0" strokeWidth={2} />
+                              {s}
                             </span>
                           ))}
                           {skillGap.missing_skills.map((s) => (
-                            <span key={s} className="rounded-lg bg-[#0051d5]/8 dark:bg-blue-900/30 text-[#0051d5] dark:text-blue-300 px-2.5 py-0.5 text-xs font-semibold">
+                            <span key={s} className="rounded-lg bg-[#0051d5]/8 dark:bg-[#0051d5]/15 text-[#0051d5] dark:text-[#6690ff] px-2.5 py-0.5 text-xs font-semibold">
                               + {s}
                             </span>
                           ))}
@@ -392,9 +395,9 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
           <motion.button
             onClick={handleExpand}
             whileHover={{ x: 2 }}
-            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-[#0051d5] dark:hover:text-blue-400 transition-colors"
+            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <ListChecks className="w-3.5 h-3.5" strokeWidth={1.75} />
             {expanded ? "Show less" : "AI Summary & Skills"}
             <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.25 }}>
               <ChevronDown className="w-3.5 h-3.5" />
@@ -445,7 +448,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
                     title="Generate cover letter"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-[#6690ff] dark:hover:text-[#6690ff] transition-all"
                   >
                     <FileText className="w-3.5 h-3.5" />
                     Cover Letter
@@ -455,7 +458,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
                     title="AI interview prep"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-blue-400 dark:hover:text-blue-400 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:border-[#6690ff] dark:hover:text-[#6690ff] transition-all"
                   >
                     <GraduationCap className="w-3.5 h-3.5" />
                     Prep
@@ -473,8 +476,8 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                       title={saved ? "Remove bookmark" : "Save job"}
                       className={`w-7 h-7 flex items-center justify-center rounded-xl border transition-all duration-200 ${
                         saved
-                          ? "border-[#0051d5]/30 dark:border-blue-600/50 bg-[#0051d5]/5 dark:bg-blue-900/20"
-                          : "border-gray-200 dark:border-gray-600 hover:border-[#0051d5]/40 dark:hover:border-blue-500"
+                          ? "border-[#0051d5]/30 dark:border-[#0051d5]/50 bg-[#0051d5]/5 dark:bg-[#0051d5]/15"
+                          : "border-gray-200 dark:border-gray-600 hover:border-[#0051d5]/40 dark:hover:border-[#0051d5]/60"
                       }`}
                     >
                       <AnimatePresence mode="wait" initial={false}>
@@ -507,7 +510,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
             ) : (
               <Link
                 href="/auth"
-                className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-[#0051d5] dark:hover:text-blue-400 transition-colors"
+                className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors"
               >
                 Sign in to apply &amp; track →
               </Link>

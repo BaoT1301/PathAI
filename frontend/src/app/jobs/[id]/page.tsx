@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
   MapPin, DollarSign, Building2, ChevronLeft,
-  Loader2, CheckCircle2, Zap, Clock,
+  Loader2, CheckCircle2, Clock,
   Bookmark, BookmarkCheck, Share2, ExternalLink, Lightbulb,
+  Target, ArrowRight,
 } from "lucide-react";
 import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus, getJobMatchScore } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -36,6 +37,7 @@ export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, session } = useAuth();
+  const reduceMotion = useReducedMotion();
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,7 +114,7 @@ export default function JobDetailPage() {
     const url = typeof window !== "undefined" ? window.location.href : "";
     const shareData = {
       title: job.title,
-      text: `${job.title}${job.company ? ` at ${job.company}` : ""} — on PathAI`,
+      text: `${job.title}${job.company ? ` at ${job.company}` : ""} on PathAI`,
       url,
     };
     try {
@@ -124,7 +126,7 @@ export default function JobDetailPage() {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      /* user cancelled share or clipboard blocked — ignore */
+      /* user cancelled share or clipboard blocked, ignore */
     }
   };
 
@@ -148,12 +150,12 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-7 h-7 animate-spin text-[#0051d5]" />
-            <p className="text-sm text-[#45474b]">Loading job…</p>
+            <Loader2 className="w-7 h-7 animate-spin text-[#0051d5]" strokeWidth={1.75} />
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading job…</p>
           </div>
         </div>
       </div>
@@ -174,7 +176,7 @@ export default function JobDetailPage() {
     : "Partial Match";
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#191c1d] antialiased">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 antialiased">
       <Header />
 
       <main className="pt-24 pb-32 px-6 md:px-12 max-w-[1440px] mx-auto">
@@ -183,9 +185,9 @@ export default function JobDetailPage() {
         <div className="mb-8 flex items-center gap-2">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#45474b] hover:text-black transition-colors text-sm font-medium"
+            className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors text-sm font-medium"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
             Back to Search
           </button>
         </div>
@@ -196,32 +198,37 @@ export default function JobDetailPage() {
           <div className="lg:col-span-8 space-y-12">
 
             {/* Job Header Card */}
-            <section className="bg-white p-8 md:p-10 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.04)]">
+            <motion.section
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="bg-white dark:bg-neutral-900 p-8 md:p-10 rounded-2xl shadow-premium border border-neutral-200/70 dark:border-neutral-800"
+            >
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="flex gap-6 items-start">
                   <CompanyLogo
                     company={job.company}
-                    className="w-16 h-16 rounded-xl shadow-sm text-xl"
+                    className="w-16 h-16 rounded-2xl shadow-premium text-xl"
                   />
                   <div>
-                    <h1 className="text-4xl font-bold tracking-tight text-black mb-2">
+                    <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-balance text-neutral-900 dark:text-white mb-2 leading-[1.1]">
                       {job.title}
                     </h1>
-                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-[#45474b] font-medium">
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-neutral-500 dark:text-neutral-400 font-medium">
                       {job.company && (
                         <span className="flex items-center gap-1.5">
-                          <Building2 className="w-5 h-5" />
+                          <Building2 className="w-5 h-5" strokeWidth={1.75} />
                           {job.company}
                         </span>
                       )}
                       <span className="flex items-center gap-1.5">
-                        <MapPin className="w-5 h-5" />
+                        <MapPin className="w-5 h-5" strokeWidth={1.75} />
                         {job.location}
                       </span>
                       {job.salary_range && (
                         <span className="flex items-center gap-1.5">
-                          <DollarSign className="w-5 h-5" />
-                          {job.salary_range}
+                          <DollarSign className="w-5 h-5" strokeWidth={1.75} />
+                          <span className="font-mono tabular-nums">{job.salary_range}</span>
                         </span>
                       )}
                     </div>
@@ -238,21 +245,21 @@ export default function JobDetailPage() {
                     whileTap={{ scale: 0.95 }}
                     animate={justSaved ? { scale: [1, 1.15, 0.95, 1] } : { scale: 1 }}
                     transition={{ duration: 0.35 }}
-                    className="p-3 rounded-full hover:bg-[#edeeef] transition-colors"
+                    className="p-3 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                   >
                     {saved
-                      ? <BookmarkCheck className="w-5 h-5 text-[#0051d5]" />
-                      : <Bookmark className="w-5 h-5 text-[#45474b]" />
+                      ? <BookmarkCheck className="w-5 h-5 text-[#0051d5] dark:text-[#6690ff]" strokeWidth={1.75} />
+                      : <Bookmark className="w-5 h-5 text-neutral-500 dark:text-neutral-400" strokeWidth={1.75} />
                     }
                   </motion.button>
                   <button
                     onClick={handleShare}
                     aria-label="Share job"
-                    className="relative p-3 rounded-full hover:bg-[#edeeef] transition-colors"
+                    className="relative p-3 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                   >
-                    <Share2 className="w-5 h-5 text-[#45474b]" />
+                    <Share2 className="w-5 h-5 text-neutral-500 dark:text-neutral-400" strokeWidth={1.75} />
                     {linkCopied && (
-                      <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold bg-black text-white px-2 py-1 rounded-md">
+                      <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold bg-black dark:bg-white text-white dark:text-black px-2 py-1 rounded-md">
                         Link copied
                       </span>
                     )}
@@ -261,38 +268,43 @@ export default function JobDetailPage() {
               </div>
 
               {/* Tag pills */}
-              <div className="mt-8 pt-8 border-t border-[#c6c6cb]/20 flex flex-wrap gap-3">
-                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+              <div className="mt-8 pt-8 border-t border-neutral-200/70 dark:border-neutral-800 flex flex-wrap gap-3">
+                <span className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs font-semibold uppercase tracking-wider rounded-full">
                   Full-time
                 </span>
-                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+                <span className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs font-semibold uppercase tracking-wider rounded-full">
                   {formatDept(job.department)}
                 </span>
-                <span className="px-4 py-1.5 bg-[#f3f4f5] text-[#45474b] text-xs font-bold uppercase tracking-wider rounded-full">
+                <span className="px-4 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs font-semibold uppercase tracking-wider rounded-full">
                   {formatSeniority(job.seniority)}
                 </span>
                 {matchScore != null && (
-                  <span className="px-4 py-1.5 bg-[#0051d5]/10 text-[#0051d5] text-xs font-bold uppercase tracking-wider rounded-full flex items-center gap-1">
-                    <Zap className="w-3 h-3" />
-                    {matchScore}% Match
+                  <span className="px-4 py-1.5 bg-[#0051d5]/10 dark:bg-[#0051d5]/15 text-[#0051d5] dark:text-[#6690ff] text-xs font-semibold uppercase tracking-wider rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5] dark:bg-[#6690ff]" />
+                    <span className="font-mono tabular-nums">{matchScore}%</span> Match
                   </span>
                 )}
               </div>
-            </section>
+            </motion.section>
 
             {/* Job Description */}
-            <section className="space-y-8">
+            <motion.section
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="space-y-8"
+            >
               <div>
-                <h2 className="text-2xl font-bold text-black mb-6">About the Role</h2>
+                <h2 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white mb-6">About the Role</h2>
                 <div
-                  className="text-[#45474b] leading-relaxed space-y-6 text-lg
+                  className="text-neutral-500 dark:text-neutral-400 leading-relaxed space-y-6 text-lg
                     [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2
                     [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2
-                    [&_li]:text-[#45474b]
+                    [&_li]:text-neutral-500 dark:[&_li]:text-neutral-400
                     [&_p]:mb-4 [&_p]:leading-relaxed
-                    [&_strong]:font-semibold [&_strong]:text-black
-                    [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-black [&_h2]:mt-8 [&_h2]:mb-4
-                    [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-black [&_h3]:mt-6 [&_h3]:mb-3"
+                    [&_strong]:font-semibold [&_strong]:text-neutral-900 dark:[&_strong]:text-white
+                    [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-neutral-900 dark:[&_h2]:text-white [&_h2]:mt-8 [&_h2]:mb-4
+                    [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-neutral-900 dark:[&_h3]:text-white [&_h3]:mt-6 [&_h3]:mb-3"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.description) }}
                 />
                 {job.external_url && (
@@ -300,29 +312,32 @@ export default function JobDetailPage() {
                     href={job.external_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#c6c6cb] text-sm font-semibold text-[#45474b] hover:border-[#0051d5] hover:text-[#0051d5] transition-all"
+                    className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-500 dark:text-neutral-400 hover:border-[#0051d5] hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-all"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
                     Read full description
                   </a>
                 )}
               </div>
-            </section>
+            </motion.section>
           </div>
 
           {/* ── Right Sidebar (4 cols, sticky) ── */}
           <aside className="lg:col-span-4 space-y-8 lg:sticky lg:top-28">
 
             {/* AI Match Analysis Widget */}
-            <div
-              className="p-8 rounded-xl text-white shadow-lg overflow-hidden relative"
+            <motion.div
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="p-8 rounded-2xl text-white shadow-premium-lg overflow-hidden relative"
               style={{ background: "linear-gradient(15deg, #0051d5 0%, #316bf3 100%)" }}
             >
               <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-bold text-lg">AI Match Analysis</h3>
-                  <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold tracking-widest uppercase">
+                  <h3 className="font-semibold text-lg tracking-tight">AI Match Analysis</h3>
+                  <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold tracking-widest uppercase">
                     Verified
                   </span>
                 </div>
@@ -330,8 +345,8 @@ export default function JobDetailPage() {
                   {personalScore === "loading" ? (
                     <div className="h-12 w-24 bg-white/20 rounded-xl animate-pulse" />
                   ) : (
-                    <span className="text-5xl font-black tracking-tighter">
-                      {matchScore != null ? `${matchScore}%` : "—"}
+                    <span className="text-5xl font-semibold font-mono tabular-nums tracking-tight">
+                      {matchScore != null ? `${matchScore}%` : "N/A"}
                     </span>
                   )}
                   <span className="text-white/80 font-medium">{matchLabel}</span>
@@ -339,90 +354,103 @@ export default function JobDetailPage() {
                 <div className="space-y-4 mb-8">
                   <div className="p-4 bg-white/10 rounded-xl">
                     <p className="text-sm font-semibold mb-1 flex items-center gap-2">
-                      <Zap className="w-4 h-4" /> Skill Alignment
+                      <Target className="w-4 h-4" strokeWidth={1.75} /> Skill Alignment
                     </p>
                     <p className="text-xs text-white/70">
                       {matchScore == null
                         ? "Upload your resume to see how your skills align."
                         : matchScore >= 70
                         ? "Your skills closely match what this role requires."
-                        : "You meet some requirements — a few gaps exist."}
+                        : "You meet some requirements, though a few gaps exist."}
                     </p>
                   </div>
                   <div className="p-4 bg-white/10 rounded-xl">
                     <p className="text-sm font-semibold mb-1 flex items-center gap-2">
-                      <Clock className="w-4 h-4" /> Career Path
+                      <Clock className="w-4 h-4" strokeWidth={1.75} /> Career Path
                     </p>
                     <p className="text-xs text-white/70">
                       {matchScore == null
                         ? "Sign in and upload your resume for a full analysis."
                         : matchScore >= 80
-                        ? "Strong trajectory fit — your background maps well."
+                        ? "Strong trajectory fit: your background maps well."
                         : "Relevant experience detected with room to grow."}
                     </p>
                   </div>
                 </div>
                 <Link
                   href="/resume"
-                  className="block w-full bg-white text-[#0051d5] py-3 rounded-xl font-bold text-sm text-center hover:bg-[#dbe1ff] transition-colors"
+                  className="block w-full bg-white text-[#0051d5] py-3 rounded-xl font-semibold text-sm text-center hover:bg-[#dbe1ff] transition-colors"
                 >
                   {matchScore == null ? "Upload Resume" : "Improve Match Rate"}
                 </Link>
               </div>
-            </div>
+            </motion.div>
 
             {/* Interview Prep Card */}
             <motion.div
-              whileHover={{ y: -2 }}
-              className="bg-black p-6 rounded-xl text-white cursor-pointer group"
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+              whileHover={reduceMotion ? undefined : { y: -2 }}
+              className="bg-black dark:bg-neutral-900 dark:border dark:border-neutral-800 p-6 rounded-2xl text-white cursor-pointer group shadow-premium"
               onClick={() => setShowCoach(true)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                  <Lightbulb className="w-5 h-5 text-white" />
+                  <Lightbulb className="w-5 h-5 text-white" strokeWidth={1.75} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">AI</span>
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/40">AI</span>
               </div>
-              <h3 className="font-black text-white text-lg mb-1">Interview Prep</h3>
+              <h3 className="font-semibold text-white text-lg mb-1 tracking-tight">Interview Prep</h3>
               <p className="text-sm text-white/50 font-medium leading-relaxed mb-5">
                 Get role-specific questions with expert tips tailored to this position.
               </p>
-              <div className="flex items-center gap-2 text-xs font-black text-white group-hover:text-white/80 transition-colors uppercase tracking-widest">
+              <div className="flex items-center gap-2 text-xs font-semibold text-white group-hover:text-white/80 transition-colors uppercase tracking-widest">
                 Generate Questions
-                <Zap className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
               </div>
             </motion.div>
 
             {/* Company Overview Card */}
-            <div className="bg-[#f3f4f5] p-8 rounded-xl border border-[#c6c6cb]/10">
-              <h3 className="font-bold text-lg mb-6">
+            <motion.div
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-2xl border border-neutral-200/70 dark:border-neutral-800"
+            >
+              <h3 className="font-semibold text-lg mb-6 tracking-tight text-neutral-900 dark:text-white">
                 About {job.company || "this company"}
               </h3>
-              <p className="text-[#45474b] text-sm leading-relaxed mb-6">
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-6">
                 {job.company} is hiring for {formatDept(job.department)} talent.
                 This role was posted {timeAgo(job.posted_date)}.
-                {job.applicant_count > 0 && ` ${job.applicant_count} candidates have applied.`}
+                {job.applicant_count > 0 && (
+                  <>
+                    {" "}
+                    <span className="font-mono tabular-nums">{job.applicant_count}</span> candidates have applied.
+                  </>
+                )}
               </p>
               <div className="space-y-4">
                 {job.location && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#45474b] font-medium">Location</span>
-                    <span className="font-semibold text-[#191c1d]">{job.location}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-medium">Location</span>
+                    <span className="font-semibold text-neutral-900 dark:text-white">{job.location}</span>
                   </div>
                 )}
                 {job.salary_range && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-[#45474b] font-medium">Salary</span>
-                    <span className="font-semibold text-[#191c1d]">{job.salary_range}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 font-medium">Salary</span>
+                    <span className="font-semibold font-mono tabular-nums text-neutral-900 dark:text-white">{job.salary_range}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#45474b] font-medium">Department</span>
-                  <span className="font-semibold text-[#191c1d]">{formatDept(job.department)}</span>
+                  <span className="text-neutral-500 dark:text-neutral-400 font-medium">Department</span>
+                  <span className="font-semibold text-neutral-900 dark:text-white">{formatDept(job.department)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#45474b] font-medium">Level</span>
-                  <span className="font-semibold text-[#191c1d]">{formatSeniority(job.seniority)}</span>
+                  <span className="text-neutral-500 dark:text-neutral-400 font-medium">Level</span>
+                  <span className="font-semibold text-neutral-900 dark:text-white">{formatSeniority(job.seniority)}</span>
                 </div>
               </div>
               {job.external_url && (
@@ -430,24 +458,24 @@ export default function JobDetailPage() {
                   href={job.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full mt-8 py-3 rounded-xl border border-[#c6c6cb] text-sm font-bold text-[#45474b] hover:bg-[#edeeef] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-8 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
                   View Original Posting
                 </a>
               )}
-            </div>
+            </motion.div>
 
           </aside>
         </div>
       </main>
 
       {/* ── Quick Apply Sticky Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-[#c6c6cb]/10 z-40">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-t border-neutral-200/70 dark:border-neutral-800 z-40">
         <div className="max-w-[1440px] mx-auto px-6 md:px-12 py-5 flex items-center justify-between">
           <div className="hidden md:block">
-            <p className="font-bold text-black">{job.title}</p>
-            <p className="text-xs text-[#45474b] font-medium uppercase tracking-widest">
+            <p className="font-semibold text-neutral-900 dark:text-white">{job.title}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium uppercase tracking-widest">
               Applying with AI-Optimized Resume
             </p>
           </div>
@@ -455,48 +483,48 @@ export default function JobDetailPage() {
             <motion.button
               onClick={() => setShowCoach(true)}
               whileTap={{ scale: 0.96 }}
-              className="hidden md:flex items-center gap-2 px-5 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
+              className="hidden md:flex items-center gap-2 px-5 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 font-semibold text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
-              <Lightbulb className="w-4 h-4" />
+              <Lightbulb className="w-4 h-4" strokeWidth={1.75} />
               Interview Prep
             </motion.button>
             <motion.button
               onClick={handleBookmark}
               disabled={savingBookmark}
               whileTap={{ scale: 0.96 }}
-              className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-[#76777b] font-bold text-sm hover:bg-[#edeeef] transition-colors"
+              className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 font-semibold text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
-              {saved ? "Saved ✓" : "Save Job"}
+              {saved ? "Saved" : "Save Job"}
             </motion.button>
 
             {user ? (
               job.source === "adzuna" && job.external_url ? (
                 isApplied ? (
-                  <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" /> Applied
+                  <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" strokeWidth={1.75} /> Applied
                   </div>
                 ) : (
                   <motion.button
                     onClick={handleExternalApply}
                     whileTap={{ scale: 0.96 }}
-                    className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                    className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-sm hover:opacity-90 active:scale-95 transition-all shadow-premium"
                   >
                     Apply Now
                   </motion.button>
                 )
               ) : isApplied ? (
-                <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm flex items-center justify-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" /> Applied
+                <div className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" strokeWidth={1.75} /> Applied
                 </div>
               ) : (
                 <motion.button
                   onClick={handleApply}
                   disabled={applying}
                   whileTap={{ scale: 0.96 }}
-                  className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-black/10 disabled:opacity-60"
+                  className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-sm hover:opacity-90 active:scale-95 transition-all shadow-premium disabled:opacity-60"
                 >
                   {applying
-                    ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                    ? <Loader2 className="w-4 h-4 animate-spin mx-auto" strokeWidth={1.75} />
                     : "Quick Apply"
                   }
                 </motion.button>
@@ -504,7 +532,7 @@ export default function JobDetailPage() {
             ) : (
               <Link
                 href="/auth"
-                className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white font-bold text-sm text-center hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black font-semibold text-sm text-center hover:opacity-90 active:scale-95 transition-all shadow-premium"
               >
                 Sign in to Apply
               </Link>
@@ -514,9 +542,9 @@ export default function JobDetailPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-neutral-50 border-0">
+      <footer className="bg-neutral-50 dark:bg-neutral-950 border-t border-neutral-100 dark:border-neutral-900">
         <div className="flex flex-col md:flex-row justify-between items-center px-12 py-16 max-w-[1440px] mx-auto gap-8">
-          <div className="text-lg font-black text-neutral-950">PathAI</div>
+          <div className="text-lg font-semibold tracking-tight text-neutral-950 dark:text-white">PathAI</div>
           <div className="flex flex-wrap justify-center gap-8">
             {[
               { label: "Browse Jobs", href: "/jobs" },
@@ -527,13 +555,13 @@ export default function JobDetailPage() {
               <Link
                 key={link.label}
                 href={link.href}
-                className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 hover:text-neutral-950 transition-colors"
+                className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-500 hover:text-neutral-950 dark:hover:text-white transition-colors"
               >
                 {link.label}
               </Link>
             ))}
           </div>
-          <div className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400">
+          <div className="text-xs uppercase tracking-[0.1em] font-semibold text-neutral-400 dark:text-neutral-500">
             © 2026 PathAI. The Intelligent Curator.
           </div>
         </div>
@@ -564,23 +592,23 @@ export default function JobDetailPage() {
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 24, opacity: 0, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 400, damping: 32 }}
-              className="relative bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl"
+              className="relative bg-white dark:bg-neutral-900 rounded-2xl p-8 max-w-sm w-full shadow-premium-lg border border-neutral-200/70 dark:border-neutral-800"
             >
-              <div className="w-14 h-14 bg-[#0051d5] rounded-2xl flex items-center justify-center mb-5 mx-auto shadow-lg shadow-[#0051d5]/20">
-                <CheckCircle2 className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-[#0051d5] rounded-2xl flex items-center justify-center mb-5 mx-auto glow-accent">
+                <CheckCircle2 className="w-7 h-7 text-white" strokeWidth={1.75} />
               </div>
-              <h3 className="text-xl font-black text-black text-center mb-2">
+              <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white text-center mb-2">
                 Did you apply?
               </h3>
-              <p className="text-sm text-neutral-400 font-medium text-center leading-relaxed mb-8">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium text-center leading-relaxed mb-8">
                 You were redirected to apply at{" "}
-                <span className="text-black font-bold">{job.company}</span>.{" "}
+                <span className="text-neutral-900 dark:text-white font-semibold">{job.company}</span>.{" "}
                 Did you complete the application?
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowAppliedModal(false)}
-                  className="flex-1 py-3 border border-neutral-200 rounded-xl text-sm font-bold text-neutral-500 hover:bg-neutral-50 transition-colors"
+                  className="flex-1 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-semibold text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
                 >
                   Not yet
                 </button>
@@ -588,9 +616,9 @@ export default function JobDetailPage() {
                   onClick={handleConfirmApplied}
                   disabled={applying}
                   whileTap={{ scale: 0.97 }}
-                  className="flex-1 py-3 bg-black text-white rounded-xl text-sm font-bold hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="flex-1 py-3 bg-black text-white dark:bg-white dark:text-black rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
                 >
-                  {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, I applied!"}
+                  {applying ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.75} /> : "Yes, I applied!"}
                 </motion.button>
               </div>
             </motion.div>

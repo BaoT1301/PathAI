@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, LogOut, ChevronDown, Navigation, Bell } from "lucide-react";
+import { LayoutDashboard, LogOut, ChevronDown, Bell } from "lucide-react";
+import { PathMark } from "@/components/Logo";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
@@ -46,7 +47,7 @@ export default function Header() {
             className="text-xl font-black tracking-tighter text-black dark:text-white flex items-center gap-2"
           >
             <div className="w-8 h-8 bg-black dark:bg-white rounded flex items-center justify-center">
-              <Navigation className="text-white dark:text-black" size={14} />
+              <PathMark className="w-3.5 h-3.5 text-white dark:text-black" />
             </div>
             PathAI
           </Link>

@@ -148,23 +148,38 @@ export default function CompanyLogo({
     };
   }, [company, cleaned]);
 
-  const domain = candidates[idx];
+  // For each resolved domain, try logo.dev first (high-res, but its token is
+  // referer-restricted so it 401s on localhost), then DuckDuckGo's favicon
+  // (no token, works on any origin including localhost). Fall through to the
+  // monogram only when every real source fails.
+  const urls = useMemo(() => {
+    const list: string[] = [];
+    for (const d of candidates) {
+      list.push(
+        `https://img.logo.dev/${d}?token=${LOGO_TOKEN}&size=128&format=png&retina=true&fallback=404`
+      );
+      list.push(`https://icons.duckduckgo.com/ip3/${d}.ico`);
+    }
+    return list;
+  }, [candidates]);
+
+  const src = urls[idx];
 
   return (
     <div
       className={`overflow-hidden flex items-center justify-center shrink-0 ${className}`}
       style={
-        domain
+        src
           ? { background: "#fff", border: "1px solid rgba(0,0,0,0.08)" }
           : {
               background: `linear-gradient(135deg, hsl(${hue} 62% 52%), hsl(${(hue + 38) % 360} 62% 42%))`,
             }
       }
     >
-      {domain ? (
+      {src ? (
         <img
-          key={domain}
-          src={`https://img.logo.dev/${domain}?token=${LOGO_TOKEN}&size=128&format=png&retina=true&fallback=404`}
+          key={src}
+          src={src}
           alt={company ?? ""}
           className="w-full h-full object-cover"
           onError={() => setIdx((i) => i + 1)}

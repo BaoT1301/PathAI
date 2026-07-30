@@ -52,13 +52,13 @@ export default function SalaryInsights({ jobId }: Props) {
     <div>
       <button
         onClick={toggle}
-        className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+        className="flex items-center gap-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
       >
-        <TrendingUp className="w-3.5 h-3.5" />
+        <TrendingUp className="w-3.5 h-3.5" strokeWidth={1.75} />
         Salary Insights
         {loading
-          ? <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" />
-          : <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+          ? <Loader2 className="w-3.5 h-3.5 animate-spin ml-1" strokeWidth={1.75} />
+          : <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={1.75} />
         }
       </button>
 
@@ -73,34 +73,36 @@ export default function SalaryInsights({ jobId }: Props) {
             <div className="pt-3 space-y-3">
               {/* Bar visualization */}
               <div>
-                <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
+                <div className="flex justify-between text-xs font-mono tabular-nums text-neutral-400 dark:text-neutral-500 mb-1">
                   <span>{formatK(data.min)}</span>
-                  <span className="text-gray-600 dark:text-gray-300 font-semibold">
-                    {formatK(data.target_min)} – {formatK(data.target_max)}
+                  <span className="text-neutral-600 dark:text-neutral-300 font-semibold">
+                    {formatK(data.target_min)} to {formatK(data.target_max)}
                   </span>
                   <span>{formatK(data.max)}</span>
                 </div>
-                <div className="relative h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="relative h-2 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                   {/* market range */}
-                  <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 rounded-full" />
+                  <div className="absolute inset-0 bg-neutral-200 dark:bg-neutral-600 rounded-full" />
                   {/* target range */}
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${barPercent}%` }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="absolute left-0 top-0 h-full bg-orange-400 rounded-full"
+                    className="absolute left-0 top-0 h-full bg-[#0051d5] rounded-full"
                   />
                 </div>
               </div>
 
               {/* Percentile label */}
               <div className="flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-orange-500" />
-                <p className="text-xs text-gray-600 dark:text-gray-300">
+                <DollarSign className="w-3.5 h-3.5 text-[#0051d5] dark:text-[#6690ff]" strokeWidth={1.75} />
+                <p className="text-xs text-neutral-600 dark:text-neutral-300">
                   This role pays above{" "}
-                  <span className="font-bold text-gray-900 dark:text-white">{data.percentile}%</span> of{" "}
+                  <span className="font-semibold font-mono tabular-nums text-neutral-900 dark:text-white">{data.percentile}%</span> of{" "}
                   {data.seniority} {data.department} roles{" "}
-                  <span className="text-gray-400 dark:text-gray-500">({data.peer_count} comparable jobs)</span>
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    (<span className="font-mono tabular-nums">{data.peer_count}</span> comparable jobs)
+                  </span>
                 </p>
               </div>
             </div>

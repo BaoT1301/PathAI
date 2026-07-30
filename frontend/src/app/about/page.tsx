@@ -1,10 +1,12 @@
 "use client";
 
-import { motion, useInView } from "framer-motion";
-import { BadgeCheck, Brain, BarChart3, Lock, Sparkles, Eye, Navigation } from "lucide-react";
+import { motion, useInView, useReducedMotion } from "framer-motion";
+import { BadgeCheck, BarChart3, Lock, BookOpen, Eye, Network, Gauge } from "lucide-react";
 import Link from "next/link";
 import { useRef } from "react";
 import Header from "@/components/Header";
+import CompanyLogo from "@/components/CompanyLogo";
+import { PathMark } from "@/components/Logo";
 
 function FadeUp({
   children,
@@ -30,6 +32,28 @@ function FadeUp({
   );
 }
 
+const FEATURED_MATCHES = [
+  { company: "Stripe", role: "Principal Engineer", score: 98 },
+  { company: "OpenAI", role: "AI Research Lead", score: 94 },
+  { company: "Anthropic", role: "ML Architect", score: 91 },
+];
+
+/* Real capability statements replace fabricated stat counters. */
+const CAPABILITIES = [
+  {
+    title: "Semantic matching",
+    desc: "Every role scored against your trajectory, not just your keywords.",
+  },
+  {
+    title: "Legible reasoning",
+    desc: "See exactly why each recommendation ranks where it does.",
+  },
+  {
+    title: "Curated sources",
+    desc: "High-growth companies, reviewed through an editorial lens.",
+  },
+];
+
 const PHILOSOPHY = [
   {
     icon: BadgeCheck,
@@ -42,7 +66,7 @@ const PHILOSOPHY = [
     desc: "We don't hide behind 'black box' algorithms. PathAI provides legible reasoning for every recommendation, empowering you with data-driven confidence.",
   },
   {
-    icon: Sparkles,
+    icon: BookOpen,
     title: "Editorial Integrity",
     desc: "Every job listed is curated through an AI-driven editorial lens, ensuring only roles from high-growth, high-impact companies reach your dashboard.",
   },
@@ -50,19 +74,21 @@ const PHILOSOPHY = [
 
 
 export default function AboutPage() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#191c1d]">
       <Header />
 
       <main className="pt-32 pb-24">
 
-        {/* ── Hero ── */}
+        {/* Hero */}
         <header className="max-w-[1440px] mx-auto px-6 md:px-12 mb-32">
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 md:col-span-8">
               <motion.span
-                className="inline-block px-4 py-1.5 rounded-full bg-[#316bf3] text-white font-semibold text-[0.75rem] uppercase tracking-[0.05em] mb-6"
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                className="inline-block px-4 py-1.5 rounded-full bg-[#0051d5] text-white font-semibold text-[0.75rem] uppercase tracking-[0.05em] mb-6"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
@@ -70,7 +96,7 @@ export default function AboutPage() {
               </motion.span>
 
               <motion.h1
-                className="text-[3.5rem] md:text-[5rem] font-bold leading-[1.1] tracking-[-0.03em] text-black mb-8"
+                className="text-[3.5rem] md:text-[5rem] font-bold leading-[1.05] tracking-[-0.03em] text-balance text-black mb-8"
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -87,7 +113,7 @@ export default function AboutPage() {
               </motion.h1>
 
               <motion.p
-                className="text-xl text-[#45474b] max-w-2xl leading-relaxed"
+                className="text-xl text-[#45474b] max-w-2xl leading-relaxed text-balance"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.42, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -97,28 +123,26 @@ export default function AboutPage() {
                 elite talent.
               </motion.p>
 
-              {/* Animated stat strip */}
+              {/* Capability statements (not fabricated counters) */}
               <motion.div
-                className="flex flex-wrap gap-8 mt-12"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-14 pt-10 border-t border-[#e2e4e6]"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.58 }}
               >
-                {[
-                  { value: "10K+", label: "Professionals Placed" },
-                  { value: "98%", label: "Match Accuracy" },
-                  { value: "500+", label: "Partner Companies" },
-                ].map(({ value, label }, i) => (
+                {CAPABILITIES.map(({ title, desc }, i) => (
                   <motion.div
-                    key={label}
+                    key={title}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.62 + i * 0.1 }}
-                    whileHover={{ scale: 1.08, y: -3 }}
-                    className="cursor-default"
+                    className="pl-4 border-l-2 border-[#0051d5]/30"
                   >
-                    <div className="text-3xl font-black text-black">{value}</div>
-                    <div className="text-xs font-bold uppercase tracking-widest text-[#76777b] mt-1">{label}</div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5] shrink-0" />
+                      <div className="text-sm font-semibold tracking-tight text-black">{title}</div>
+                    </div>
+                    <div className="text-sm text-[#76777b] leading-relaxed">{desc}</div>
                   </motion.div>
                 ))}
               </motion.div>
@@ -126,54 +150,66 @@ export default function AboutPage() {
           </div>
         </header>
 
-        {/* ── Philosophy ── */}
+        {/* Philosophy */}
         <section className="max-w-[1440px] mx-auto px-6 md:px-12 mb-40">
           <div className="grid grid-cols-12 gap-6 items-center">
 
-            {/* Left: editorial visual */}
+            {/* Left: real matches panel */}
             <FadeUp className="col-span-12 md:col-span-5 order-2 md:order-1 relative" delay={0.05}>
-              <div className="aspect-[4/5] rounded-xl overflow-hidden bg-[#181c22] shadow-lg relative">
-                {/* Grid pattern */}
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-                    backgroundSize: "40px 40px",
-                  }}
-                />
-                {/* Glow blob */}
-                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 bg-[#0051d5]/20 rounded-full blur-3xl pointer-events-none" />
-                {/* Center brand mark */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center relative z-10">
+              <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-neutral-900 border border-white/[0.06] shadow-premium-lg relative flex flex-col">
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5">
                     <motion.div
-                      className="w-20 h-20 bg-[#0051d5] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_60px_rgba(0,81,213,0.4)]"
-                      animate={{ y: [0, -10, 0] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <Navigation className="text-white" size={32} />
-                    </motion.div>
-                    <div className="text-white font-black text-3xl tracking-tighter">PathAI</div>
-                    <div className="text-white/40 text-xs uppercase tracking-[0.2em] mt-2 font-semibold">
-                      The Intelligent Curator
-                    </div>
+                      className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
+                      animate={reduceMotion ? {} : { opacity: [1, 0.4, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                      Live Matches
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/10">
+                      <PathMark className="w-3 h-3 text-white" />
+                    </span>
+                    <span className="text-white font-semibold text-sm tracking-tight">PathAI</span>
                   </div>
                 </div>
-                {/* Corner watermarks */}
-                <div className="absolute top-8 left-8 text-white/5 text-[120px] font-black leading-none select-none pointer-events-none">
-                  AI
+
+                {/* Match rows: real logos via CompanyLogo */}
+                <div className="flex-1 flex flex-col justify-center gap-3 px-6 py-6">
+                  {FEATURED_MATCHES.map(({ company, role, score }) => (
+                    <div
+                      key={company}
+                      className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10"
+                    >
+                      <CompanyLogo company={company} className="w-10 h-10 rounded-lg" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white text-sm font-semibold truncate">{role}</div>
+                        <div className="text-white/40 text-xs truncate mt-0.5">{company}</div>
+                      </div>
+                      <div className="text-[#6690ff] font-semibold font-mono tabular-nums text-base shrink-0">
+                        {score}%
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="absolute bottom-8 right-8 w-24 h-24 rounded-full border border-white/10 pointer-events-none" />
-                <div className="absolute bottom-12 right-12 w-16 h-16 rounded-full border border-white/5 pointer-events-none" />
+
+                {/* Footer */}
+                <div className="px-6 py-5 border-t border-white/10 shrink-0">
+                  <p className="text-white/30 text-[11px] leading-relaxed">
+                    The Intelligent Curator, scoring every role against your career trajectory.
+                  </p>
+                </div>
               </div>
               {/* Quote card */}
               <motion.div
-                className="absolute -bottom-8 -right-8 p-8 bg-white rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.06)] hidden md:block max-w-[280px]"
-                whileHover={{ y: -4, boxShadow: "0 20px 48px rgba(25,28,29,0.12)" }}
+                className="absolute -bottom-8 -right-8 p-8 bg-white rounded-2xl border border-neutral-200/70 shadow-premium-lg hidden md:block max-w-[280px]"
+                whileHover={reduceMotion ? undefined : { y: -4 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="text-sm font-medium italic text-[#45474b]">
+                <p className="text-sm font-medium italic text-[#45474b] leading-relaxed">
                   &ldquo;Intelligence is not just data collection; it is the art of discerning what
                   matters.&rdquo;
                 </p>
@@ -185,17 +221,17 @@ export default function AboutPage() {
               className="col-span-12 md:col-start-7 md:col-span-6 order-1 md:order-2 mb-12 md:mb-0"
               delay={0.1}
             >
-              <h2 className="text-4xl font-bold tracking-tight mb-8">Our Philosophy</h2>
+              <h2 className="text-4xl font-semibold tracking-tight text-balance mb-8">Our Philosophy</h2>
               <div className="space-y-8">
                 {PHILOSOPHY.map(({ icon: Icon, title, desc }) => (
                   <motion.div
                     key={title}
-                    whileHover={{ x: 6 }}
+                    whileHover={reduceMotion ? undefined : { x: 6 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className="group cursor-default"
                   >
-                    <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-[#0051d5] shrink-0 group-hover:scale-110 transition-transform duration-200" />
+                    <h3 className="text-lg font-semibold tracking-tight mb-3 flex items-center gap-2.5">
+                      <Icon className="w-5 h-5 text-[#0051d5] shrink-0" strokeWidth={1.75} />
                       {title}
                     </h3>
                     <p className="text-[#45474b] leading-relaxed">{desc}</p>
@@ -206,36 +242,32 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ── Technology Bento ── */}
+        {/* Technology Bento */}
         <section className="bg-[#f3f4f5] py-32 mb-40">
           <div className="max-w-[1440px] mx-auto px-6 md:px-12">
             <FadeUp className="text-center mb-20">
-              <span className="text-[#0051d5] text-[0.75rem] uppercase tracking-[0.1em] font-bold">
+              <span className="text-[#0051d5] text-[0.75rem] uppercase tracking-[0.1em] font-semibold">
                 Technology Stack
               </span>
-              <h2 className="text-4xl font-bold tracking-tight mt-4">The Intelligent Curator</h2>
+              <h2 className="text-4xl font-semibold tracking-tight text-balance mt-4">The Intelligent Curator</h2>
             </FadeUp>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-              {/* LLM Core — 2 cols */}
+              {/* LLM Core, 2 cols */}
               <motion.div
-                className="md:col-span-2 bg-white p-10 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.04)] flex flex-col justify-between cursor-default"
+                className="md:col-span-2 bg-white border border-neutral-200/70 p-10 rounded-3xl shadow-premium flex flex-col justify-between cursor-default"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ y: -8, boxShadow: "0 28px 64px rgba(25,28,29,0.12)" }}
+                whileHover={reduceMotion ? undefined : { y: -6 }}
               >
                 <div>
-                  <motion.div
-                    className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-8"
-                    whileHover={{ rotate: 8, scale: 1.1 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Brain className="text-white w-5 h-5" />
-                  </motion.div>
-                  <h3 className="text-2xl font-bold mb-4">LLM Semantic Reasoning</h3>
+                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-8">
+                    <Network className="text-white w-5 h-5" strokeWidth={1.75} />
+                  </div>
+                  <h3 className="text-2xl font-semibold tracking-tight text-balance mb-4">LLM Semantic Reasoning</h3>
                   <p className="text-[#45474b] text-lg leading-relaxed max-w-xl">
                     Our core engine uses customized Large Language Models to read between the lines
                     of job descriptions and resumes, identifying latent skills and cultural
@@ -243,84 +275,69 @@ export default function AboutPage() {
                   </p>
                 </div>
                 <div className="mt-12 flex items-center gap-4">
-                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-bold uppercase tracking-wider text-[#45474b]">
+                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-semibold uppercase tracking-wider text-[#45474b]">
                     Context Aware
                   </span>
-                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-bold uppercase tracking-wider text-[#45474b]">
+                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-semibold uppercase tracking-wider text-[#45474b]">
                     Vector Embeddings
                   </span>
                 </div>
               </motion.div>
 
-              {/* 98% Accuracy — 1 col */}
+              {/* Transparent scoring, 1 col (replaces the fabricated accuracy stat) */}
               <motion.div
-                className="bg-[#316bf3] p-10 rounded-xl flex flex-col justify-center text-white cursor-default overflow-hidden relative"
+                className="bg-[#0051d5] p-10 rounded-3xl flex flex-col justify-between text-white cursor-default shadow-premium-lg"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ scale: 1.03, boxShadow: "0 24px 60px rgba(49,107,243,0.4)" }}
+                whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <motion.div
-                  className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full pointer-events-none"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <div className="text-[4rem] font-black mb-4 leading-none relative z-10">98%</div>
-                <h3 className="text-xl font-bold mb-2 relative z-10">Accuracy Rate</h3>
-                <p className="opacity-80 leading-relaxed relative z-10">
-                  Our proprietary Match Scoring algorithm predicts long-term retention and job
-                  satisfaction with unprecedented precision.
-                </p>
+                <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center mb-8">
+                  <Gauge className="text-white w-5 h-5" strokeWidth={1.75} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-semibold tracking-tight text-balance mb-3">Scoring you can read</h3>
+                  <p className="opacity-80 leading-relaxed">
+                    Every role is scored on skills, trajectory, and culture fit, with the reasoning
+                    behind each number shown so you can trust the ranking.
+                  </p>
+                </div>
               </motion.div>
 
-              {/* Market Data — 1 col */}
+              {/* Market Data, 1 col */}
               <motion.div
-                className="bg-white p-10 rounded-xl shadow-[0_12px_40px_rgba(25,28,29,0.04)] cursor-default"
+                className="bg-white border border-neutral-200/70 p-10 rounded-3xl shadow-premium cursor-default"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ y: -8, boxShadow: "0 28px 64px rgba(25,28,29,0.12)" }}
+                whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <motion.div
-                  className="w-12 h-12 bg-[#e7e8e9] rounded-lg flex items-center justify-center mb-8"
-                  whileHover={{ rotate: -8, scale: 1.1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <BarChart3 className="text-black w-5 h-5" />
-                </motion.div>
-                <h3 className="text-xl font-bold mb-4">Dynamic Market Mapping</h3>
+                <div className="w-12 h-12 bg-[#e7e8e9] rounded-xl flex items-center justify-center mb-8">
+                  <BarChart3 className="text-black w-5 h-5" strokeWidth={1.75} />
+                </div>
+                <h3 className="text-xl font-semibold tracking-tight mb-4">Dynamic Market Mapping</h3>
                 <p className="text-[#45474b] leading-relaxed">
                   Real-time analysis of industry trends, compensation benchmarks, and hiring
                   velocity across global tech hubs.
                 </p>
               </motion.div>
 
-              {/* Privacy — 2 cols */}
+              {/* Privacy, 2 cols */}
               <motion.div
-                className="md:col-span-2 bg-black text-white p-10 rounded-xl flex items-center gap-12 cursor-default overflow-hidden relative"
+                className="md:col-span-2 bg-black text-white p-10 rounded-3xl flex items-center gap-8 cursor-default shadow-premium-lg"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ scale: 1.015, boxShadow: "0 24px 60px rgba(0,0,0,0.4)" }}
+                whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <motion.div
-                  className="absolute -bottom-12 -right-12 w-48 h-48 bg-[#0051d5]/10 rounded-full pointer-events-none"
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.1, 0.2, 0.1] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <div className="hidden lg:flex shrink-0 items-center justify-center relative z-10">
-                  <motion.div
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                  >
-                    <Lock className="text-white/20 w-16 h-16" />
-                  </motion.div>
+                <div className="hidden sm:flex shrink-0 w-12 h-12 bg-white/10 rounded-xl items-center justify-center">
+                  <Lock className="text-white w-5 h-5" strokeWidth={1.75} />
                 </div>
-                <div className="relative z-10">
-                  <h3 className="text-xl font-bold mb-2">Sovereign Privacy</h3>
+                <div>
+                  <h3 className="text-xl font-semibold tracking-tight mb-2">Sovereign Privacy</h3>
                   <p className="opacity-80 leading-relaxed">
                     Your data is yours. PathAI utilizes zero-retention LLM processing and
                     localized encryption to ensure your job search remains entirely confidential
@@ -332,67 +349,47 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ── CTA ── */}
+        {/* CTA */}
         <section className="max-w-[1440px] mx-auto px-6 md:px-12">
           <motion.div
-            className="relative bg-black rounded-[4rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.15)]"
+            className="relative bg-black rounded-[4rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.2)]"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            {/* Grid pattern */}
-            <div className="absolute inset-0 grid-bg opacity-10 pointer-events-none" />
-
-            {/* Glow orbs */}
-            <motion.div
-              className="absolute -top-20 -left-20 w-80 h-80 bg-[#0051d5]/20 rounded-full blur-3xl pointer-events-none"
-              animate={{ scale: [1, 1.15, 1], opacity: [0.2, 0.35, 0.2] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <motion.div
-              className="absolute -bottom-20 -right-20 w-96 h-96 bg-[#316bf3]/15 rounded-full blur-3xl pointer-events-none"
-              animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.3, 0.15] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            />
-
             <div className="relative z-10 max-w-3xl mx-auto text-center">
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/60 text-xs font-bold uppercase tracking-widest mb-10"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/60 text-xs font-semibold uppercase tracking-widest mb-10"
               >
-                <motion.span
-                  className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block"
-                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }}
-                  transition={{ duration: 1.8, repeat: Infinity }}
-                />
-                Network Active
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6690ff] inline-block" />
+                The Intelligent Curator
               </motion.div>
 
               <motion.h2
-                className="text-6xl md:text-8xl font-black leading-[0.85] tracking-tight mb-10"
+                className="text-6xl md:text-8xl font-bold leading-[0.9] tracking-tight text-balance mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                READY TO
+                Ready to
                 <br />
-                <span className="text-[#0051d5]">EVOLVE?</span>
+                <span className="text-[#6690ff]">evolve?</span>
               </motion.h2>
 
               <motion.p
-                className="text-xl text-neutral-400 font-medium mb-14 leading-relaxed"
+                className="text-xl text-neutral-400 font-medium mb-14 leading-relaxed text-balance"
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                Join 10,000+ top professionals letting AI match them to roles that
-                fit their trajectory — not just their keywords.
+                Let AI match you to roles that fit your trajectory, not just your keywords.
               </motion.p>
 
               <motion.div
@@ -402,34 +399,49 @@ export default function AboutPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={reduceMotion ? undefined : { scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                   <Link
                     href="/jobs"
-                    className="inline-block bg-white text-black px-12 py-5 rounded-full font-black text-lg hover:bg-neutral-100 transition-colors shadow-2xl"
+                    className="inline-block bg-white text-black px-12 py-5 rounded-full font-semibold text-lg hover:bg-neutral-100 transition-colors shadow-premium-lg"
                   >
                     Explore Roles
                   </Link>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+                <motion.div whileHover={reduceMotion ? undefined : { scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                   <Link
                     href="/auth"
-                    className="inline-block bg-white/10 text-white px-12 py-5 rounded-full font-black text-lg border border-white/20 hover:bg-white/15 transition-colors"
+                    className="inline-block bg-white/10 text-white px-12 py-5 rounded-full font-semibold text-lg border border-white/20 hover:bg-white/15 transition-colors"
                   >
                     Get Started Free
                   </Link>
                 </motion.div>
               </motion.div>
+
+              <motion.p
+                className="text-sm font-medium text-neutral-500 mt-8"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                Free to start. No card required.
+              </motion.p>
             </div>
           </motion.div>
         </section>
 
       </main>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer className="bg-zinc-50">
         <div className="flex flex-col md:flex-row justify-between items-center px-6 md:px-12 py-16 max-w-[1440px] mx-auto gap-8">
           <div className="flex flex-col items-center md:items-start gap-4">
-            <div className="text-lg font-black text-zinc-950">PathAI</div>
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-black">
+                <PathMark className="w-[18px] h-[18px] text-white" />
+              </span>
+              <span className="text-lg font-bold tracking-tight text-zinc-950">PathAI</span>
+            </Link>
             <div className="text-xs uppercase tracking-[0.1em] font-semibold text-zinc-400">
               © 2026 PathAI. The Intelligent Curator.
             </div>

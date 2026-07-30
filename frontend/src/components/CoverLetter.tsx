@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X, Loader2, FileText, Copy, Check, Upload, RefreshCw, CircleCheck } from "lucide-react";
 import { Job, generateCoverLetter, fetchSavedResume, uploadResume, SavedResume } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +24,7 @@ function timeAgo(dateStr: string) {
 
 export default function CoverLetter({ job, onClose }: CoverLetterProps) {
   const { session } = useAuth();
+  const reduceMotion = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [phase, setPhase] = useState<Phase>("checking");
@@ -121,22 +122,22 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: "100%", opacity: 0 }}
+        initial={reduceMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
+        exit={reduceMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-gray-800 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-neutral-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-premium-lg border border-neutral-200/70 dark:border-neutral-800 flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-              <FileText className="text-orange-500" style={{ width: 18, height: 18 }} />
+            <div className="w-9 h-9 bg-[#0051d5]/10 dark:bg-[#0051d5]/20 rounded-xl flex items-center justify-center">
+              <FileText className="text-[#0051d5] dark:text-[#6690ff]" style={{ width: 18, height: 18 }} strokeWidth={1.75} />
             </div>
             <div>
-              <h2 className="font-bold text-gray-900 dark:text-white text-sm">Cover Letter</h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[220px]">
+              <h2 className="font-semibold text-neutral-900 dark:text-white text-sm tracking-tight">Cover Letter</h2>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate max-w-[220px]">
                 {job.title} · {job.company}
               </p>
             </div>
@@ -149,29 +150,29 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                   whileTap={{ scale: 0.95 }}
                   onClick={handleRegenerate}
                   title="Regenerate"
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-orange-300 hover:text-orange-500 transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500 hover:border-[#0051d5]/40 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-all"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-orange-300 hover:text-orange-600 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:border-[#0051d5]/40 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-all"
                 >
                   {copied ? (
-                    <><Check className="w-3.5 h-3.5 text-emerald-500" /> Copied!</>
+                    <><Check className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.75} /> Copied!</>
                   ) : (
-                    <><Copy className="w-3.5 h-3.5" /> Copy</>
+                    <><Copy className="w-3.5 h-3.5" strokeWidth={1.75} /> Copy</>
                   )}
                 </motion.button>
               </>
             )}
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" strokeWidth={1.75} />
             </button>
           </div>
         </div>
@@ -189,12 +190,12 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center justify-center py-16 gap-3"
               >
-                <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                <p className="text-sm text-gray-400 dark:text-gray-500">Checking for saved resume…</p>
+                <Loader2 className="w-6 h-6 animate-spin text-[#0051d5]" strokeWidth={1.75} />
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">Checking for saved resume…</p>
               </motion.div>
             )}
 
-            {/* No saved resume — upload prompt */}
+            {/* No saved resume, upload prompt */}
             {phase === "upload" && (
               <motion.div
                 key="upload"
@@ -204,13 +205,13 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                 className="space-y-4"
               >
                 <div className="text-center space-y-1">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                  <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
                     {savedResume ? "Update your resume" : "Upload your resume"}
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500">
                     {savedResume
                       ? "Your new resume will be saved for all future cover letters."
-                      : "Upload once — we\u2019ll save it and use it for all your cover letters."}
+                      : "Upload once, and we\u2019ll save it for all your future cover letters."}
                   </p>
                 </div>
 
@@ -226,27 +227,27 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
-                  animate={{ borderColor: dragOver ? "#f97316" : "#e5e7eb" }}
+                  animate={{ borderColor: dragOver ? "#0051d5" : "#e5e7eb" }}
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-2xl px-6 py-10 flex flex-col items-center gap-3 cursor-pointer hover:border-orange-400 dark:hover:border-orange-600 hover:bg-orange-50/30 dark:hover:bg-orange-900/10 transition-all"
+                  className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-2xl px-6 py-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#0051d5]/50 dark:hover:border-[#6690ff]/50 hover:bg-[#0051d5]/[0.03] dark:hover:bg-[#0051d5]/10 transition-all"
                 >
                   {uploading ? (
                     <>
-                      <Loader2 className="w-7 h-7 animate-spin text-orange-500" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <Loader2 className="w-7 h-7 animate-spin text-[#0051d5]" strokeWidth={1.75} />
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400">
                         Uploading {uploadFile?.name}…
                       </p>
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center">
-                        <Upload className="w-5 h-5 text-orange-500" />
+                      <div className="w-12 h-12 bg-[#0051d5]/10 dark:bg-[#0051d5]/20 rounded-2xl flex items-center justify-center">
+                        <Upload className="w-5 h-5 text-[#0051d5] dark:text-[#6690ff]" strokeWidth={1.75} />
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
                           Drop your resume here
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
                           or click to browse · PDF or DOCX
                         </p>
                       </div>
@@ -263,9 +264,9 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                 {savedResume && (
                   <button
                     onClick={() => generateLetter(savedResume.resume_summary)}
-                    className="w-full text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors py-1"
+                    className="w-full text-xs font-semibold text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors py-1"
                   >
-                    ← Keep existing resume
+                    Keep existing resume
                   </button>
                 )}
               </motion.div>
@@ -280,8 +281,8 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                 exit={{ opacity: 0 }}
                 className="flex flex-col items-center justify-center py-16 gap-3"
               >
-                <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
-                <p className="text-sm text-gray-400 dark:text-gray-500">Writing your cover letter…</p>
+                <Loader2 className="w-6 h-6 animate-spin text-[#0051d5]" strokeWidth={1.75} />
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">Writing your cover letter…</p>
               </motion.div>
             )}
 
@@ -297,18 +298,18 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                 {savedResume && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-700 rounded-lg px-2.5 py-1">
-                      <CircleCheck className="w-3 h-3" />
+                      <CircleCheck className="w-3 h-3" strokeWidth={1.75} />
                       Resume used · updated {timeAgo(savedResume.updated_at)}
                     </div>
                     <button
                       onClick={handleUpdateResume}
-                      className="text-xs font-semibold text-gray-400 dark:text-gray-500 hover:text-orange-500 transition-colors"
+                      className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors"
                     >
                       Update resume
                     </button>
                   </div>
                 )}
-                <div className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap bg-gray-50 dark:bg-gray-900 rounded-2xl px-5 py-4 border border-gray-100 dark:border-gray-700">
+                <div className="text-sm text-neutral-700 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap bg-neutral-50 dark:bg-neutral-800/60 rounded-2xl px-5 py-4 border border-neutral-100 dark:border-neutral-700">
                   {letter}
                 </div>
               </motion.div>
@@ -331,9 +332,9 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
 
         {/* Footer */}
         {phase === "done" && (
-          <div className="px-6 pb-5 pt-3 border-t border-gray-100 dark:border-gray-700 shrink-0">
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-              AI-generated — review and personalise before sending.
+          <div className="px-6 pb-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 shrink-0">
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 text-center">
+              AI-generated. Review and personalise before sending.
             </p>
           </div>
         )}

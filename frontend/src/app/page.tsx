@@ -6,29 +6,31 @@ import {
   useMotionValue,
   useSpring,
   useTransform,
+  useReducedMotion,
   AnimatePresence,
   type Variants,
 } from "framer-motion";
 import {
-  Navigation,
-  Sparkles,
-  TrendingUp,
   ArrowRight,
   ScanLine,
   GitBranch,
   Rocket,
   BadgeCheck,
   Check,
-  FileText,
-  Zap,
-  Users,
-  BarChart3,
+  Send,
+  User,
 } from "lucide-react";
 import Header from "@/components/Header";
+import CompanyLogo from "@/components/CompanyLogo";
+import { PathMark } from "@/components/Logo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Job, fetchJobs } from "@/lib/api";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /* ============================================================
    Animation Variants
@@ -113,6 +115,60 @@ function ScrollReveal({
 }
 
 /* ============================================================
+   CountUp: animates a number when scrolled into view.
+   Reduced-motion safe: snaps straight to the final value.
+   ============================================================ */
+
+function CountUp({
+  to,
+  decimals = 0,
+  prefix = "",
+  suffix = "",
+  duration = 1400,
+}: {
+  to: number;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
+  duration?: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const reduceMotion = useReducedMotion();
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    if (reduceMotion) {
+      setValue(to);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setValue(to * eased);
+      if (p < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setValue(to);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, to, duration, reduceMotion]);
+
+  return (
+    <span ref={ref}>
+      {prefix}
+      {value.toFixed(decimals)}
+      {suffix}
+    </span>
+  );
+}
+
+/* ============================================================
    Helpers
    ============================================================ */
 
@@ -139,6 +195,7 @@ const STATIC_JOBS = [
 function ResumeScanner() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const reduceMotion = useReducedMotion();
   const [extracted, setExtracted] = useState(false);
 
   useEffect(() => {
@@ -151,83 +208,110 @@ function ResumeScanner() {
   const keywords = ["Python", "TensorFlow", "PyTorch", "Kubernetes", "Go", "System Design"];
 
   return (
-    <div ref={ref} className="bg-neutral-900/50 rounded-[3rem] border border-neutral-800 p-8 overflow-hidden relative h-full flex flex-col gap-5">
+    <div ref={ref} className="font-sans bg-neutral-900/50 rounded-[3rem] border border-neutral-800 p-8 overflow-hidden relative h-full flex flex-col gap-6">
       {/* Resume document */}
-      <div className="bg-neutral-800/60 rounded-2xl p-5 relative overflow-hidden flex-1">
-        {/* Scanning beam */}
+      <div className="relative flex-1 rounded-2xl border border-white/[0.06] bg-neutral-800/40 overflow-hidden">
+        {/* Soft extraction sweep â€” a low-opacity band, never a neon laser */}
         <motion.div
-          className="absolute left-0 right-0 h-[2px] pointer-events-none z-10"
-          style={{ background: "linear-gradient(to right, transparent, #0051d5 45%, #93c5fd 55%, transparent)", boxShadow: "0 0 14px 3px rgba(0,81,213,0.5)" }}
-          initial={{ top: "0%", opacity: 0 }}
-          animate={inView ? { top: ["0%", "100%", "0%"], opacity: [0, 1, 1, 0] } : {}}
-          transition={{ duration: 2.8, repeat: Infinity, repeatDelay: 1.2, ease: "easeInOut" }}
+          className="absolute inset-x-0 h-20 pointer-events-none z-10"
+          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,81,213,0.10), transparent)" }}
+          initial={{ top: "-25%" }}
+          animate={inView && !reduceMotion ? { top: ["-25%", "110%"] } : {}}
+          transition={{ duration: 2.1, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.6 }}
         />
 
-        {/* Name / header */}
-        <motion.div className="flex items-center gap-3 mb-4"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.1 }}>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neutral-500 to-neutral-700 flex items-center justify-center text-[10px] font-black text-white shrink-0">
-            AC
-          </div>
-          <div>
-            <div className="text-white text-xs font-bold">Alex Chen</div>
-            <div className="text-neutral-500 text-[10px]">San Francisco, CA · alex@gmail.com</div>
-          </div>
-        </motion.div>
+        {/* Document window chrome */}
+        <div className="flex items-center gap-1.5 px-5 pt-4 pb-3">
+          <span className="w-2 h-2 rounded-full bg-white/10" />
+          <span className="w-2 h-2 rounded-full bg-white/10" />
+          <span className="w-2 h-2 rounded-full bg-white/10" />
+          <span className="ml-2 text-[10px] font-mono tracking-tight text-neutral-500">alex-chen-resume.pdf</span>
+        </div>
+        <div className="h-px bg-white/[0.06]" />
 
-        <motion.div className="text-[11px] font-bold text-white/90 mb-0.5"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.25 }}>
-          Senior Machine Learning Engineer
-        </motion.div>
-        <motion.div className="text-[10px] text-neutral-500 mb-3.5"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.35 }}>
-          Google DeepMind · 2019 — 2024
-        </motion.div>
+        <div className="p-5">
+          {/* Identity */}
+          <motion.div className="flex items-center gap-3"
+            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.1 }}>
+            <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-neutral-400 shrink-0">
+              <User size={16} strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-white text-[13px] font-semibold tracking-tight leading-tight">Alex Chen</div>
+              <div className="text-neutral-500 text-[10px] font-mono tracking-tight">San Francisco, CA · alex@gmail.com</div>
+            </div>
+          </motion.div>
 
-        <motion.p className="text-[10px] text-neutral-400 leading-[1.7] mb-4"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.45 }}>
-          Led production ML pipelines serving 2B+ requests/day. Architected distributed
-          training on TPU v4 pods for large-scale language models and contributed to
-          internal AutoML frameworks used across Google.
-        </motion.p>
+          <div className="h-px bg-white/[0.06] my-4" />
 
-        {/* Skills line â€” lights up when scan detects it */}
-        <motion.div
-          className="rounded-xl p-3 border transition-all duration-500"
-          style={{
-            backgroundColor: extracted ? "rgba(0,81,213,0.12)" : "rgba(255,255,255,0.03)",
-            borderColor: extracted ? "rgba(0,81,213,0.35)" : "rgba(255,255,255,0.06)",
-          }}
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.55 }}>
-          <div className="flex flex-wrap gap-x-2 gap-y-1">
-            {keywords.map((kw, i) => (
-              <motion.span
-                key={kw}
-                className="text-[10px] font-semibold transition-colors duration-400"
-                style={{ color: extracted ? "#93c5fd" : "#52525b" }}
-                animate={extracted ? { scale: [1, 1.08, 1] } : {}}
-                transition={{ delay: i * 0.06, duration: 0.28 }}>
-                {kw}{i < keywords.length - 1 ? " ·" : ""}
-              </motion.span>
-            ))}
-          </div>
-        </motion.div>
+          {/* Role */}
+          <motion.div
+            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.22 }}>
+            <div className="text-[12px] font-semibold text-white/90 tracking-tight leading-tight">
+              Senior Machine Learning Engineer
+            </div>
+            <div className="text-[10px] text-neutral-500 font-mono tracking-tight mt-1">
+              Google DeepMind · 2019 to 2024
+            </div>
+          </motion.div>
+
+          <motion.p className="text-[10px] text-neutral-400 leading-[1.75] mt-3"
+            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.34 }}>
+            Led production ML pipelines serving 2B+ requests/day. Architected distributed
+            training on TPU v4 pods for large-scale language models and contributed to
+            internal AutoML frameworks used across Google.
+          </motion.p>
+
+          <div className="h-px bg-white/[0.06] my-4" />
+
+          {/* Skills row â€” the extraction target; keywords tint to accent when parsed */}
+          <motion.div
+            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.46 }}>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-neutral-500 mb-2">
+              Core Skills
+            </div>
+            <div className="flex flex-wrap items-center gap-y-1">
+              {keywords.map((kw, i) => (
+                <span key={kw} className="inline-flex items-center text-[10px] font-medium tracking-tight leading-none">
+                  <motion.span
+                    className="rounded px-1 py-0.5 transition-colors duration-500"
+                    style={{
+                      color: extracted ? "#6690ff" : "#71717a",
+                      backgroundColor: extracted ? "rgba(0,81,213,0.10)" : "transparent",
+                    }}
+                    animate={extracted && !reduceMotion ? { opacity: [0.45, 1] } : {}}
+                    transition={{ delay: i * 0.08, duration: 0.45 }}>
+                    {kw}
+                  </motion.span>
+                  {i < keywords.length - 1 && <span className="text-neutral-700 px-1">·</span>}
+                </span>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Extracted signals */}
       <div>
-        <motion.p className="text-[10px] font-black uppercase tracking-widest text-neutral-500 mb-3"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.8 }}>
-          Extracted Signals
-        </motion.p>
-        <div className="flex flex-wrap gap-2">
+        <motion.div className="flex items-center gap-2 mb-3"
+          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.7 }}>
+          <motion.span
+            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
+            animate={reduceMotion ? {} : { opacity: [1, 0.4, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity }}
+          />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+            Extracted Signals
+          </p>
+        </motion.div>
+        <div className="flex flex-wrap gap-1.5">
           {chips.map((skill, i) => (
             <motion.span
               key={skill}
-              className="px-3 py-1 bg-[#0051d5]/20 border border-[#0051d5]/40 rounded-full text-xs font-bold text-[#0051d5]"
-              initial={{ opacity: 0, scale: 0.7, y: 8 }}
-              animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
-              transition={{ delay: 1.65 + i * 0.1, type: "spring", stiffness: 400, damping: 20 }}>
+              className="px-2.5 py-1 rounded-full text-[11px] font-medium tracking-tight bg-[#0051d5]/10 border border-[#0051d5]/20 text-[#6690ff]"
+              initial={{ opacity: 0, y: 6 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 1.5 + i * 0.08, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}>
               {skill}
             </motion.span>
           ))}
@@ -241,93 +325,84 @@ function ResumeScanner() {
 function MatchVisual() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const reduceMotion = useReducedMotion();
 
   const matches = [
-    { role: "Principal Engineer", co: "Stripe",    score: 98, abbr: "S", tag: "Top Pick"   },
-    { role: "AI Research Lead",   co: "OpenAI",    score: 94, abbr: "O", tag: "Strong Fit" },
-    { role: "ML Architect",       co: "Anthropic", score: 91, abbr: "A", tag: "High Match" },
+    { role: "Principal Engineer", co: "Stripe",    score: 98, tag: "Top Pick"   },
+    { role: "AI Research Lead",   co: "OpenAI",    score: 94, tag: "Strong Fit" },
+    { role: "ML Architect",       co: "Anthropic", score: 91, tag: "High Match" },
   ];
 
   return (
-    <div ref={ref} className="bg-neutral-900/60 rounded-[3rem] border border-neutral-800 overflow-hidden h-full flex flex-col">
-      {/* Header bar */}
-      <div className="px-6 py-4 border-b border-neutral-800 flex items-center justify-between">
+    <div ref={ref} className="font-sans bg-neutral-900/60 rounded-[3rem] border border-neutral-800 overflow-hidden h-full flex flex-col">
+      {/* Header bar â€” one subtle live dot */}
+      <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <motion.div
-            className="w-2 h-2 rounded-full bg-[#0051d5]"
-            animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
-            transition={{ duration: 1.6, repeat: Infinity }}
+          <motion.span
+            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
+            animate={reduceMotion ? {} : { opacity: [1, 0.35, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity }}
           />
-          <span className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-400">AI Matching</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-300">AI Matching</span>
         </div>
-        <motion.span className="text-[10px] font-mono text-neutral-600"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.5 }}>
-          50,247 scanned
-        </motion.span>
+        <span className="text-[10px] font-mono tabular-nums text-neutral-500 tracking-tight">~50k roles</span>
       </div>
 
-      <div className="p-5 flex flex-col gap-2.5 flex-1 justify-center">
+      <div className="p-4 flex flex-col gap-2 flex-1 justify-center">
         {matches.map((m, i) => (
           <motion.div
             key={m.role}
-            className="flex items-center gap-3.5 p-3.5 rounded-2xl border border-neutral-800 hover:border-neutral-700 transition-colors"
-            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-            initial={{ opacity: 0, x: -20 }}
+            className="group flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+            initial={{ opacity: 0, x: -16 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ delay: 0.15 + i * 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}>
+            transition={{ delay: 0.15 + i * 0.16, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
 
-            {/* Company monogram */}
-            <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center font-black text-sm text-neutral-300 shrink-0">
-              {m.abbr}
-            </div>
+            {/* Company logo tile */}
+            <CompanyLogo company={m.co} className="w-11 h-11 rounded-xl" />
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-white text-[11px] font-bold truncate">{m.role}</span>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-white text-[13px] font-semibold tracking-tight truncate leading-none">{m.role}</span>
                 {i === 0 && (
-                  <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[8px] font-black text-white uppercase tracking-wide bg-[#0051d5]">
+                  <span className="shrink-0 inline-flex items-center rounded-md bg-[#0051d5]/15 px-1.5 py-0.5 text-[9px] font-semibold font-mono tabular-nums text-[#6690ff] leading-none">
                     #1
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 mb-2">
-                <span>{m.co}</span>
-                <span className="text-neutral-700">·</span>
-                <span>{m.tag}</span>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-[11px] text-neutral-400 tracking-tight leading-none">{m.co}</span>
+                <span className="inline-flex items-center rounded-full bg-white/[0.05] px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.08em] text-neutral-400 leading-none">
+                  {m.tag}
+                </span>
               </div>
-              <div className="h-[3px] w-full bg-neutral-700/40 rounded-full overflow-hidden">
+              {/* Thin accent progress bar */}
+              <div className="h-[2px] w-full bg-white/[0.06] rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-[#0051d5] rounded-full"
                   initial={{ width: "0%" }}
                   animate={inView ? { width: `${m.score}%` } : {}}
-                  transition={{ delay: 0.5 + i * 0.18, duration: 0.85, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  transition={{ delay: 0.5 + i * 0.16, duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
                 />
               </div>
             </div>
 
             {/* Score */}
-            <div className="text-right shrink-0 pl-1">
-              <motion.span
-                className="text-lg font-black tabular-nums text-[#0051d5]"
-                initial={{ opacity: 0 }}
-                animate={inView ? { opacity: 1 } : {}}
-                transition={{ delay: 0.65 + i * 0.18 }}>
-                {m.score}
-              </motion.span>
-              <span className="text-neutral-600 text-[10px] font-bold">%</span>
+            <div className="shrink-0 text-right pl-1 w-14">
+              <span className="text-[22px] font-semibold font-mono tabular-nums tracking-tight text-white leading-none">
+                <CountUp to={m.score} />
+              </span>
+              <span className="text-neutral-500 text-[11px] font-mono ml-0.5">%</span>
             </div>
           </motion.div>
         ))}
       </div>
 
       {/* Footer */}
-      <motion.div className="px-5 pb-5 flex items-center gap-2"
+      <motion.div className="px-6 py-4 border-t border-white/[0.06] flex items-center justify-between"
         initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.95 }}>
-        <motion.div className="w-1.5 h-1.5 rounded-full bg-green-400"
-          animate={{ scale: [1, 1.3, 1], opacity: [1, 0.6, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }} />
-        <span className="text-[10px] text-neutral-600">Updated continuously via PathAI engine</span>
+        <span className="text-[10px] text-neutral-500 tracking-tight">Ranked by PathAI engine</span>
+        <span className="text-[10px] font-mono tabular-nums text-neutral-600">updated live</span>
       </motion.div>
     </div>
   );
@@ -337,6 +412,7 @@ function MatchVisual() {
 function InsertionVisual() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const reduceMotion = useReducedMotion();
 
   const events = [
     { title: "Profile verified",                meta: "98th percentile fit detected",       time: "0:00", live: false },
@@ -346,79 +422,92 @@ function InsertionVisual() {
   ];
 
   return (
-    <div ref={ref} className="bg-neutral-900/60 rounded-[2.5rem] border border-neutral-800 overflow-hidden">
-      {/* Window chrome */}
-      <div className="flex items-center justify-between px-5 py-3.5 bg-neutral-800/50 border-b border-neutral-800">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-          <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
-          <div className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
+    <div ref={ref} className="font-sans bg-neutral-900/60 rounded-[2.5rem] border border-neutral-800 overflow-hidden">
+      {/* Title bar */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <CompanyLogo company="Stripe" className="w-7 h-7 rounded-lg" />
+          <div className="min-w-0 leading-none">
+            <div className="text-[12px] font-semibold text-white tracking-tight leading-none">Stripe</div>
+            <div className="text-[10px] text-neutral-500 font-mono tracking-tight mt-1">Application timeline</div>
+          </div>
         </div>
-        <span className="text-[10px] text-neutral-500 font-mono tracking-wide">Application · Stripe</span>
+        <div className="flex items-center gap-1.5 shrink-0 rounded-full bg-[#0051d5]/10 border border-[#0051d5]/20 px-2 py-1">
+          <motion.span
+            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
+            animate={reduceMotion ? {} : { opacity: [1, 0.35, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity }}
+          />
+          <span className="text-[9px] font-semibold text-[#6690ff] uppercase tracking-[0.14em]">Live</span>
+        </div>
+      </div>
+
+      {/* Connected activity timeline */}
+      <div className="p-5">
+        <div className="relative">
+          {/* Vertical connector, draws in behind the nodes */}
+          <motion.div
+            className="absolute left-[25px] top-4 bottom-4 w-px bg-white/[0.08] origin-top"
+            initial={{ scaleY: 0 }}
+            animate={inView ? { scaleY: 1 } : {}}
+            transition={{ duration: 1.1, ease: "easeInOut" }}
+          />
+
+          <div className="space-y-1">
+            {events.map((ev, i) => (
+              <motion.div
+                key={ev.title}
+                className={`relative flex items-start gap-3.5 rounded-xl px-3 py-3 ${
+                  ev.live ? "bg-[#0051d5]/[0.08] glow-accent" : ""
+                }`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.25 + i * 0.22, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}>
+
+                {/* Node */}
+                <div className={`relative z-10 w-[27px] h-[27px] rounded-full flex items-center justify-center shrink-0 ${
+                  ev.live
+                    ? "bg-[#0051d5] text-white"
+                    : "bg-neutral-800 border border-white/10 text-neutral-300"
+                }`}>
+                  {ev.live ? (
+                    <Send size={12} strokeWidth={1.75} />
+                  ) : (
+                    <Check size={12} strokeWidth={1.75} />
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[12px] font-semibold tracking-tight ${ev.live ? "text-white" : "text-white/90"}`}>
+                      {ev.title}
+                    </span>
+                    <span className="text-[10px] text-neutral-500 font-mono tabular-nums shrink-0">{ev.time}</span>
+                  </div>
+                  <span className="block text-[10px] text-neutral-500 tracking-tight mt-1">{ev.meta}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Calendar invite chip */}
         <motion.div
-          className="px-2 py-0.5 rounded-full bg-green-500/15 border border-green-500/30 text-[9px] font-black text-green-400 uppercase tracking-wide"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.1 }}>
-          Live
+          className="mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] p-3"
+          initial={{ opacity: 0, y: 8 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.25 + events.length * 0.22 + 0.15, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
+          <div className="w-10 h-10 rounded-xl bg-[#0051d5]/12 border border-[#0051d5]/25 flex items-center justify-center shrink-0">
+            <span className="text-[#6690ff] text-[10px] font-semibold tracking-wide leading-none">THU</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-white text-[12px] font-semibold tracking-tight">Interview Scheduled</div>
+            <div className="text-neutral-500 text-[10px] tracking-tight mt-0.5">Thursday · 2:00 PM Pacific · Google Meet</div>
+          </div>
+          <BadgeCheck size={16} strokeWidth={1.75} className="text-[#6690ff] shrink-0" />
         </motion.div>
       </div>
-
-      <div className="p-4 space-y-2">
-        {events.map((ev, i) => (
-          <motion.div
-            key={ev.title}
-            className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
-              ev.live
-                ? "bg-[#0051d5]/10 border-[#0051d5]/20"
-                : "bg-white/[0.03] border-transparent"
-            }`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ delay: 0.2 + i * 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}>
-
-            {/* Icon */}
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-              ev.live ? "bg-[#0051d5]/25 text-[#60a5fa]" : "bg-green-500/15 text-green-400"
-            }`}>
-              {ev.live ? (
-                <motion.div animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 1, repeat: Infinity }}>
-                  <Zap size={11} />
-                </motion.div>
-              ) : (
-                <Check size={11} />
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className={`text-[11px] font-bold ${ev.live ? "text-[#60a5fa]" : "text-white/90"}`}>
-                  {ev.title}
-                </span>
-                <span className="text-[10px] text-neutral-600 font-mono shrink-0">{ev.time}</span>
-              </div>
-              <span className="text-[10px] text-neutral-500 block mt-0.5">{ev.meta}</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Calendar invite chip */}
-      <motion.div
-        className="mx-4 mb-4 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-3"
-        initial={{ opacity: 0, y: 8 }}
-        animate={inView ? { opacity: 1, y: 0 } : {}}
-        transition={{ delay: 1.5, type: "spring", stiffness: 200, damping: 22 }}>
-        <div className="w-9 h-9 rounded-xl bg-[#0051d5] flex items-center justify-center shrink-0">
-          <span className="text-white text-[9px] font-black leading-none text-center">THU</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-white text-[11px] font-bold">Interview Scheduled</div>
-          <div className="text-neutral-500 text-[10px]">Thursday · 2:00 PM Pacific · Google Meet</div>
-        </div>
-        <motion.div className="w-2 h-2 rounded-full bg-green-400 shrink-0"
-          animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }} />
-      </motion.div>
     </div>
   );
 }
@@ -447,6 +536,8 @@ const PLACEHOLDER_SCORES = [98, 94, 91, 89];
 export default function HomePage() {
   const [featuredJobs, setFeaturedJobs] = useState<Job[]>([]);
   const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const cardRef = useRef<HTMLDivElement>(null);
   const cardMouseX = useMotionValue(0);
   const cardMouseY = useMotionValue(0);
@@ -459,15 +550,72 @@ export default function HomePage() {
       .catch(console.error);
   }, []);
 
+  /* ------------------------------------------------------------
+     GSAP scroll polish, layered on top of the existing
+     framer-motion. It only touches decorative layers and the
+     two purely-static sections (logos + footer) so it never
+     fights the framer-motion reveals already on the page.
+     Transform/opacity only. Disabled under reduced motion.
+     ------------------------------------------------------------ */
+  useEffect(() => {
+    if (reduceMotion) return;
+
+    const ctx = gsap.context(() => {
+      // Hero: gentle scrub parallax on the floating decorative blobs.
+      gsap.utils.toArray<HTMLElement>("[data-parallax]").forEach((el) => {
+        const speed = parseFloat(el.dataset.parallax || "0");
+        const trigger =
+          el.closest<HTMLElement>("[data-hero-section]") || el;
+        gsap.fromTo(
+          el,
+          { yPercent: 0 },
+          {
+            yPercent: speed,
+            ease: "none",
+            scrollTrigger: {
+              trigger,
+              start: "top top",
+              end: "bottom top",
+              scrub: true,
+            },
+          }
+        );
+      });
+
+      // Static sections: fade/rise reveal, once.
+      gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 48,
+          duration: 0.9,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: el,
+            start: "top 88%",
+            once: true,
+          },
+        });
+      });
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, [reduceMotion]);
+
   return (
-    <div className="relative flex min-h-screen flex-col bg-white overflow-x-hidden text-neutral-900">
+    <div
+      ref={rootRef}
+      className="relative flex min-h-screen flex-col bg-white overflow-x-hidden text-neutral-900"
+    >
       <Header />
 
       {/* ================================================================
           HERO
           ================================================================ */}
-      <section className="relative min-h-[90vh] flex items-center pt-20 pb-20 overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-30 -z-10 pointer-events-none" />
+      <section
+        data-hero-section
+        className="relative min-h-[90vh] flex items-center pt-20 pb-20 overflow-hidden"
+      >
+        <div className="absolute inset-0 grid-bg opacity-[0.12] -z-10 pointer-events-none" />
 
         <div className="max-w-[1440px] mx-auto px-8 w-full">
           {/* Badge + headline */}
@@ -479,9 +627,9 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-black text-white mb-8 shadow-lg"
+              className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-black text-white mb-8 shadow-lg"
             >
-              <Sparkles size={13} className="text-white" fill="white" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5]" />
               <span className="text-[10px] font-black tracking-[0.2em] uppercase">
                 Intelligence Driven Hiring
               </span>
@@ -545,20 +693,20 @@ export default function HomePage() {
               </motion.div>
             </motion.div>
 
-            {/* Right: floating product card */}
+            {/* Right: product match card */}
             <div className="lg:col-span-7 flex justify-center lg:justify-end">
               <motion.div
                 ref={cardRef}
                 className="relative w-full max-w-lg cursor-default"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
-                whileHover={{ y: -16, transition: { type: "spring", stiffness: 220, damping: 18 } }}
                 transition={{
                   duration: 0.8,
                   delay: 0.4,
                   ease: [0.25, 0.46, 0.45, 0.94],
                 }}
                 onMouseMove={(e) => {
+                  if (reduceMotion) return;
                   const rect = cardRef.current?.getBoundingClientRect();
                   if (!rect) return;
                   cardMouseX.set(e.clientX - rect.left - rect.width / 2);
@@ -567,76 +715,78 @@ export default function HomePage() {
                 onMouseLeave={() => { cardMouseX.set(0); cardMouseY.set(0); }}
               >
                 <motion.div
-                  animate={{ y: [-10, 10] }}
-                  transition={{
-                    duration: 6,
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                    ease: "easeInOut",
-                  }}
-                  style={{
-                    rotateX: cardRotateX,
-                    rotateY: cardRotateY,
-                    transformPerspective: 1000,
-                  }}
-                  className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-2xl border border-neutral-100"
+                  style={
+                    reduceMotion
+                      ? undefined
+                      : {
+                          rotateX: cardRotateX,
+                          rotateY: cardRotateY,
+                          transformPerspective: 1000,
+                        }
+                  }
+                  className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-neutral-200/80 shadow-[0_40px_80px_-20px_rgba(0,81,213,0.15)]"
                 >
-                  <div className="flex items-center gap-6 mb-10">
-                    <motion.div
-                      className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center shadow-lg"
-                      whileHover={{ backgroundColor: "#0051d5", scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                      <TrendingUp className="text-white" size={28} />
-                    </motion.div>
-                    <div>
-                      <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400">
-                        Current Match
+                  {/* Header: real logo + role + score chip */}
+                  <div className="flex items-start justify-between gap-4 mb-8">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <CompanyLogo company="Stripe" className="w-16 h-16 rounded-2xl" />
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">
+                          Top Match
+                        </div>
+                        <div className="text-2xl font-black tracking-tight leading-none">
+                          Senior Product Engineer
+                        </div>
+                        <div className="text-sm font-medium text-neutral-400 mt-1.5 truncate">
+                          Stripe · San Francisco · Hybrid
+                        </div>
                       </div>
-                      <div className="text-2xl font-black tracking-tight">
-                        Principal Product
-                      </div>
+                    </div>
+                    <div className="shrink-0 inline-flex items-center rounded-full bg-[#0051d5]/10 px-3 py-1.5">
+                      <span className="text-sm font-black tabular-nums text-[#0051d5]">96%</span>
                     </div>
                   </div>
 
-
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex justify-between text-xs font-black uppercase mb-2">
-                        <span>Alignment</span>
-                        <span className="text-[#0051d5]">98%</span>
+                  {/* Evidence rows with mini bars */}
+                  <div className="space-y-4">
+                    {[
+                      { label: "Skills", value: 96 },
+                      { label: "Trajectory", value: 92 },
+                      { label: "Culture", value: 88 },
+                    ].map((sig, i) => (
+                      <div key={sig.label}>
+                        <div className="flex justify-between text-xs font-bold mb-1.5">
+                          <span className="text-neutral-500">{sig.label}</span>
+                          <span className="text-neutral-900 tabular-nums">{sig.value}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-[#0051d5] rounded-full"
+                            initial={{ width: "0%" }}
+                            animate={{ width: `${sig.value}%` }}
+                            transition={{
+                              duration: 1.1,
+                              delay: 0.9 + i * 0.15,
+                              ease: [0.25, 0.46, 0.45, 0.94],
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-3 w-full bg-neutral-100 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-[#0051d5] rounded-full"
-                          initial={{ width: "0%" }}
-                          animate={{ width: "98%" }}
-                          transition={{
-                            duration: 1.5,
-                            delay: 0.9,
-                            ease: [0.25, 0.46, 0.45, 0.94],
-                          }}
-                        />
-                      </div>
-                    </div>
+                    ))}
+                  </div>
 
-                    <p className="text-sm md:text-base font-medium text-neutral-500 leading-relaxed">
-                      Profile resonance detected with OpenAI&apos;s core strategy
-                      group. High probability of culture-fit match.
-                    </p>
+                  <p className="text-sm font-medium text-neutral-500 leading-relaxed mt-7">
+                    Strong overlap with your ML infrastructure background. Matched
+                    on 12 of 14 core competencies.
+                  </p>
 
-                    <div className="pt-6 border-t border-neutral-100 flex items-center justify-between opacity-50">
-                      <span className="text-[10px] font-black uppercase tracking-widest">
-                        PathAI Analytics
-                      </span>
-                      <BadgeCheck size={20} />
-                    </div>
+                  <div className="pt-6 mt-7 border-t border-neutral-100 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                      Analyzed by PathAI
+                    </span>
+                    <BadgeCheck size={18} strokeWidth={1.75} className="text-[#0051d5]" />
                   </div>
                 </motion.div>
-
-                {/* Decorative blobs */}
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#0051d5]/5 rounded-full -z-10 blur-xl pointer-events-none" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-neutral-200/20 rounded-full -z-10 blur-2xl pointer-events-none" />
               </motion.div>
             </div>
           </div>
@@ -646,7 +796,7 @@ export default function HomePage() {
       {/* ================================================================
           SOCIAL PROOF â€” infinite scrolling logos
           ================================================================ */}
-      <section className="py-12 border-y border-neutral-100 overflow-hidden">
+      <section data-reveal className="py-12 border-y border-neutral-100 overflow-hidden">
         <div className="relative">
           {/* Left + right fade masks */}
           <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
@@ -727,7 +877,7 @@ export default function HomePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   <div className="lg:col-span-5">
                     <div className="w-20 h-20 rounded-3xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-8">
-                      <ScanLine size={36} className="text-white" />
+                      <ScanLine size={36} strokeWidth={1.75} className="text-white" />
                     </div>
                     <h3 className="text-4xl font-black mb-6">
                       Deep Contextual Scanning
@@ -761,7 +911,7 @@ export default function HomePage() {
                   </div>
                   <div className="lg:col-span-7 order-1 lg:order-2">
                     <div className="w-20 h-20 rounded-3xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-8">
-                      <GitBranch size={36} className="text-white" />
+                      <GitBranch size={36} strokeWidth={1.75} className="text-white" />
                     </div>
                     <h3 className="text-4xl font-black mb-6">
                       Autonomous Pattern Matching
@@ -788,8 +938,8 @@ export default function HomePage() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   <div className="lg:col-span-5">
-                    <div className="w-20 h-20 rounded-3xl bg-[#0051d5] flex items-center justify-center mb-8 shadow-[0_0_50px_rgba(0,81,213,0.3)]">
-                      <Rocket size={36} className="text-white" />
+                    <div className="w-20 h-20 rounded-3xl bg-[#0051d5] flex items-center justify-center mb-8 shadow-[0_8px_24px_-8px_rgba(0,81,213,0.35)]">
+                      <Rocket size={36} strokeWidth={1.75} className="text-white" />
                     </div>
                     <h3 className="text-4xl font-black mb-6">
                       Verified Direct Insertion
@@ -844,93 +994,105 @@ export default function HomePage() {
           {(() => {
             const displayJobs = featuredJobs.length > 0 ? featuredJobs : STATIC_JOBS;
             return (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 font-sans">
               {/* Large featured card */}
               <motion.div
-                className="lg:col-span-7 group relative bg-white p-12 md:p-16 rounded-[3rem] shadow-xl border border-neutral-200/50 flex flex-col justify-between min-h-[560px] overflow-hidden cursor-pointer"
+                className="lg:col-span-7 group relative bg-white p-10 md:p-14 rounded-[2.5rem] shadow-premium-lg border border-neutral-200/70 flex flex-col justify-between min-h-[560px] overflow-hidden cursor-pointer"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                whileHover={{ scale: 1.01 }}
+                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                whileHover={reduceMotion ? undefined : { y: -4 }}
                 onClick={() => router.push(`/jobs/${displayJobs[0].id}`)}
               >
-                {/* Background score watermark */}
-                <div className="absolute top-0 right-0 p-12 pointer-events-none select-none">
-                  <div className="text-8xl font-black text-neutral-200 group-hover:text-[#0051d5]/20 transition-colors duration-500">
-                    {PLACEHOLDER_SCORES[0]}%
+                {/* Soft accent wash on hover */}
+                <div className="spotlight pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                {/* Top row: logo + refined match chip */}
+                <div className="relative flex items-start justify-between gap-4">
+                  <CompanyLogo
+                    company={displayJobs[0].company ?? displayJobs[0].title}
+                    className="w-16 h-16 rounded-2xl shadow-premium"
+                  />
+                  <div className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-[#0051d5]/10 border border-[#0051d5]/15 px-3.5 py-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5]" />
+                    <span className="text-[13px] font-semibold font-mono tabular-nums text-[#0051d5] leading-none">
+                      {PLACEHOLDER_SCORES[0]}%
+                    </span>
+                    <span className="text-[11px] font-medium text-[#0051d5]/70 leading-none">match</span>
                   </div>
                 </div>
 
-                <div>
-                  <div className="w-20 h-20 bg-neutral-50 border border-neutral-100 rounded-2xl flex items-center justify-center text-4xl font-black mb-12">
-                    {(displayJobs[0].company ?? displayJobs[0].title)[0]}
-                  </div>
-                  <h3 className="text-4xl md:text-5xl font-black tracking-tight mb-4 group-hover:text-[#0051d5] transition-colors leading-tight">
+                <div className="relative">
+                  <h3 className="text-4xl md:text-6xl font-black tracking-tight leading-[0.95] mb-4 group-hover:text-[#0051d5] transition-colors">
                     {displayJobs[0].title}
                   </h3>
-                  <p className="text-neutral-400 font-bold uppercase tracking-widest text-sm mb-12">
+                  <p className="text-neutral-400 font-semibold uppercase tracking-[0.18em] text-xs mb-8">
                     {displayJobs[0].company &&
-                      `${displayJobs[0].company} • `}
+                      `${displayJobs[0].company} · `}
                     {displayJobs[0].location}
                   </p>
-                  <div className="flex flex-wrap gap-4 mb-12">
-                    <span className="px-5 py-2 bg-neutral-50 border border-neutral-100 rounded-full text-xs font-black text-neutral-500 uppercase tracking-widest">
+                  <div className="flex flex-wrap gap-2.5 mb-10">
+                    <span className="px-4 py-1.5 bg-neutral-50 border border-neutral-200/70 rounded-full text-[11px] font-semibold text-neutral-500 uppercase tracking-[0.12em]">
                       {fmtDept(displayJobs[0].department)}
                     </span>
-                    <span className="px-5 py-2 bg-neutral-50 border border-neutral-100 rounded-full text-xs font-black text-neutral-500 uppercase tracking-widest">
+                    <span className="px-4 py-1.5 bg-neutral-50 border border-neutral-200/70 rounded-full text-[11px] font-semibold text-neutral-500 uppercase tracking-[0.12em]">
                       {displayJobs[0].seniority}
                     </span>
                   </div>
-                </div>
 
-                <MagneticButton>
-                  <button
-                    className="bg-black text-white px-10 py-5 rounded-2xl font-black text-base shadow-xl hover:bg-neutral-800 transition-all w-max"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push("/jobs");
-                    }}
-                  >
-                    Fast-Track Application
-                  </button>
-                </MagneticButton>
+                  <MagneticButton>
+                    <button
+                      className="group/btn inline-flex items-center gap-2.5 bg-black text-white px-8 py-4 rounded-2xl font-semibold text-[15px] shadow-premium hover:bg-neutral-800 transition-colors w-max"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push("/jobs");
+                      }}
+                    >
+                      Fast-Track Application
+                      <ArrowRight size={18} strokeWidth={1.75} className="transition-transform group-hover/btn:translate-x-0.5" />
+                    </button>
+                  </MagneticButton>
+                </div>
               </motion.div>
 
               {/* Secondary cards */}
-              <div className="lg:col-span-5 space-y-6">
+              <div className="lg:col-span-5 space-y-5">
                 {displayJobs.slice(1, 4).map((job, i) => (
                   <motion.div
                     key={job.id}
-                    className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-lg border border-neutral-200/50 flex items-center justify-between group hover:border-[#0051d5] transition-all cursor-pointer"
-                    initial={{ opacity: 0, x: 30 }}
+                    className="group bg-white p-6 md:p-7 rounded-[2rem] shadow-premium border border-neutral-200/70 flex items-center justify-between gap-4 cursor-pointer transition-[box-shadow,border-color] duration-300 hover:shadow-premium-lg hover:border-[#0051d5]/30"
+                    initial={{ opacity: 0, x: 24 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
+                    transition={{ duration: 0.5, delay: i * 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    whileHover={reduceMotion ? undefined : { y: -4 }}
                     onClick={() => router.push(`/jobs/${job.id}`)}
                   >
-                    <div className="flex gap-5 items-center min-w-0">
-                      <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center text-white font-black text-xl shrink-0">
-                        {(job.company ?? job.title)[0]}
-                      </div>
+                    <div className="flex gap-4 items-center min-w-0">
+                      <CompanyLogo
+                        company={job.company ?? job.title}
+                        className="w-14 h-14 rounded-2xl shadow-premium"
+                      />
                       <div className="min-w-0">
-                        <h4 className="text-lg font-black leading-tight truncate">
+                        <h4 className="text-[17px] font-bold tracking-tight leading-tight truncate group-hover:text-[#0051d5] transition-colors">
                           {job.title}
                         </h4>
-                        <p className="text-xs font-bold text-neutral-400 uppercase tracking-widest mt-1 truncate">
-                          {job.company && `${job.company} • `}
+                        <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.14em] mt-1.5 truncate">
+                          {job.company && `${job.company} · `}
                           {job.location}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <div className="text-2xl font-black text-[#0051d5]">
-                        {PLACEHOLDER_SCORES[i + 1]}%
-                      </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xl font-semibold font-mono tabular-nums text-[#0051d5] leading-none">
+                        {PLACEHOLDER_SCORES[i + 1]}
+                        <span className="text-neutral-300 text-sm">%</span>
+                      </span>
                       <ArrowRight
-                        className="text-neutral-300 group-hover:text-black transition-colors ml-auto mt-1"
                         size={16}
+                        strokeWidth={1.75}
+                        className="text-neutral-300 transition-all group-hover:text-[#0051d5] group-hover:translate-x-0.5"
                       />
                     </div>
                   </motion.div>
@@ -959,10 +1121,10 @@ export default function HomePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
               {[
-                { value: "10K+",  label: "Professionals Placed",  icon: Users,    delay: 0    },
-                { value: "95%",   label: "Match Accuracy",        icon: BarChart3, delay: 0.1  },
-                { value: "3.2x",  label: "Faster Hiring",         icon: Zap,      delay: 0.2  },
-                { value: "500+",  label: "Partner Companies",     icon: FileText, delay: 0.3  },
+                { to: 10,  decimals: 0, suffix: "K+", label: "Professionals Placed", delay: 0    },
+                { to: 95,  decimals: 0, suffix: "%",  label: "Match Accuracy",       delay: 0.1  },
+                { to: 3.2, decimals: 1, suffix: "x",  label: "Faster Hiring",        delay: 0.2  },
+                { to: 500, decimals: 0, suffix: "+",  label: "Partner Companies",    delay: 0.3  },
               ].map((stat) => (
                 <motion.div
                   key={stat.label}
@@ -972,11 +1134,8 @@ export default function HomePage() {
                   viewport={{ once: true }}
                   transition={{ delay: stat.delay, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <div className="w-12 h-12 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <stat.icon size={20} className="text-neutral-500" />
-                  </div>
                   <div className="text-5xl font-black tracking-tight text-black mb-2">
-                    {stat.value}
+                    <CountUp to={stat.to} decimals={stat.decimals} suffix={stat.suffix} />
                   </div>
                   <div className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
                     {stat.label}
@@ -994,7 +1153,6 @@ export default function HomePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <div className="absolute inset-0 grid-bg opacity-10 pointer-events-none" />
             <div className="relative z-10 max-w-3xl mx-auto">
               <motion.h2
                 className="text-6xl md:text-8xl font-black leading-[0.85] tracking-tight mb-12"
@@ -1011,7 +1169,7 @@ export default function HomePage() {
                 Join 10,000+ top professionals who are letting AI do the heavy
                 lifting of career management.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-10">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
                 <MagneticButton>
                   <Link
                     href="/auth"
@@ -1020,19 +1178,9 @@ export default function HomePage() {
                     Get Started Free
                   </Link>
                 </MagneticButton>
-                <div className="text-left">
-                  <div className="text-xs font-black uppercase tracking-[0.3em] text-neutral-500 mb-1">
-                    Status
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <motion.div
-                      className="w-2 h-2 rounded-full bg-green-500"
-                      animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <span className="text-sm font-bold">Network Active</span>
-                  </div>
-                </div>
+                <span className="text-sm font-bold text-neutral-400">
+                  Free to start. No card required.
+                </span>
               </div>
             </div>
           </motion.div>
@@ -1042,7 +1190,7 @@ export default function HomePage() {
       {/* ================================================================
           FOOTER
           ================================================================ */}
-      <footer className="w-full py-24 px-8 md:px-16 border-t border-neutral-100 bg-white">
+      <footer data-reveal className="w-full py-24 px-8 md:px-16 border-t border-neutral-100 bg-white">
         <div className="max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 mb-20">
             <div className="lg:col-span-4">
@@ -1051,7 +1199,7 @@ export default function HomePage() {
                 className="text-2xl font-black tracking-tighter text-black flex items-center gap-3 mb-10"
               >
                 <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                  <Navigation className="text-white" size={18} />
+                  <PathMark className="w-[18px] h-[18px] text-white" />
                 </div>
                 PathAI
               </Link>
