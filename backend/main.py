@@ -1118,3 +1118,28 @@ async def record_event(
     db.add(JobEvent(user_id=user["sub"], job_id=body.job_id, event_type=body.event_type))
     await db.commit()
     return {"ok": True}
+
+
+# ─────────────────────────────────────────────
+# Account data deletion (privacy)
+# ─────────────────────────────────────────────
+
+@app.delete("/api/me", status_code=204)
+async def delete_my_data(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Delete all of the signed-in user's PathAI data: resume profile/embedding,
+    applications, saved jobs, alerts, feedback events, and usage records. This
+    does NOT delete the Supabase auth account itself (that needs the Supabase
+    service key and is a separate admin call)."""
+    from sqlalchemy import delete as sa_delete
+
+    uid = user["sub"]
+    for model in (JobEvent, AiUsage, SavedJob, Application, JobAlert):
+        await db.execute(sa_delete(model).where(model.user_id == uid))
+    profile = await db.get(UserProfile, uid)
+    if profile is not None:
+        await db.delete(profile)
+    await db.commit()
+    return None
