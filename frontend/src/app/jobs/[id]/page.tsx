@@ -10,7 +10,7 @@ import {
   Bookmark, BookmarkCheck, Share2, ExternalLink, Lightbulb,
   Target, ArrowRight,
 } from "lucide-react";
-import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus, getJobMatchScore } from "@/lib/api";
+import { Job, fetchJob, applyToJob, getApplicationStatus, saveJob, unsaveJob, getSavedJobStatus, getJobMatchScore, recordEvent } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import InterviewCoach from "@/components/InterviewCoach";
 import CoverLetter from "@/components/CoverLetter";
@@ -74,6 +74,7 @@ export default function JobDetailPage() {
     getJobMatchScore(id, session.access_token).then((data) => {
       setPersonalScore(data?.match_score ?? null);
     });
+    recordEvent(id, "viewed", session.access_token);
   }, [id, session]);
 
   const handleApply = async () => {
@@ -82,6 +83,7 @@ export default function JobDetailPage() {
     try {
       await applyToJob(job.id, session.access_token);
       setAppStatus("applied");
+      recordEvent(job.id, "applied", session.access_token);
     } catch {
       setAppStatus("applied");
     } finally {
@@ -102,6 +104,7 @@ export default function JobDetailPage() {
     try {
       await applyToJob(job.id, session.access_token);
       setAppStatus("applied");
+      recordEvent(job.id, "applied", session.access_token);
     } catch {
       setAppStatus("applied");
     } finally {
@@ -140,6 +143,7 @@ export default function JobDetailPage() {
       } else {
         await saveJob(job.id, session.access_token);
         setSaved(true);
+        recordEvent(job.id, "saved", session.access_token);
         setJustSaved(true);
         setTimeout(() => setJustSaved(false), 700);
       }

@@ -27,6 +27,29 @@ export interface Job {
   external_url: string | null;
   source: string;
   applicant_count: number;
+  match_reasons?: string[];
+}
+
+/**
+ * Fire-and-forget: record an implicit feedback event so the backend can
+ * personalize ranking over time. Only fires when signed in, and silently
+ * ignores any failure (e.g. the endpoint not yet deployed) so it never blocks
+ * or breaks the UI.
+ */
+export function recordEvent(
+  jobId: string,
+  eventType: "viewed" | "clicked" | "saved" | "applied" | "dismissed",
+  token?: string,
+): void {
+  if (!token) return;
+  try {
+    void authedFetch(`${API_URL}/api/events`, token, {
+      method: "POST",
+      body: JSON.stringify({ job_id: jobId, event_type: eventType }),
+    }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function fetchJob(id: string): Promise<Job> {

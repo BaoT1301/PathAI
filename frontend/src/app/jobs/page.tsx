@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { X, ArrowRight, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, BarChart3, AlertTriangle, SearchX } from "lucide-react";
-import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob } from "@/lib/api";
+import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob, recordEvent } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
 import { useNotifications } from "@/context/NotificationsContext";
@@ -370,6 +370,7 @@ export default function JobsPage() {
     }
     try {
       await saveJob(jobId, session.access_token);
+      recordEvent(jobId, "saved", session.access_token);
       setSavedIds((prev) => new Set([...prev, jobId]));
       router.push("/dashboard");
     } catch { /* ignore */ }
