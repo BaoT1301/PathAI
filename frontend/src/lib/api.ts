@@ -250,7 +250,16 @@ export async function generateCoverLetter(
     method: "POST",
     body: JSON.stringify({ resume_summary: resumeSummary }),
   });
-  if (!res.ok) throw new Error("Failed to generate cover letter");
+  if (!res.ok) {
+    let detail = "Failed to generate cover letter";
+    try {
+      const e = await res.json();
+      if (e?.detail) detail = e.detail;
+    } catch {
+      /* keep default message */
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 
