@@ -234,17 +234,6 @@ export default function AboutPage() {
                   </div>
                 </div>
               </div>
-              {/* Quote card */}
-              <motion.div
-                className="absolute -bottom-8 -right-8 p-8 bg-white rounded-2xl ring-1 ring-neutral-200/70 shadow-premium-lg hidden md:block max-w-[280px]"
-                whileHover={reduceMotion ? undefined : { y: -4 }}
-                transition={{ duration: 0.2 }}
-              >
-                <p className="font-serif italic text-base leading-relaxed text-neutral-600">
-                  &ldquo;Intelligence is not just data collection; it is the art of discerning what
-                  matters.&rdquo;
-                </p>
-              </motion.div>
             </FadeUp>
 
             {/* Right: principles */}
