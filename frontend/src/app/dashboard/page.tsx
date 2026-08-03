@@ -34,8 +34,19 @@ const STAGES = [
 type StageKey = typeof STAGES[number]["key"];
 const STAGE_ORDER: StageKey[] = ["applied", "phone_screen", "interview", "offer", "hired", "rejected"];
 
+// The linear pipeline (rejected sits outside the funnel). Short labels keep the
+// five-column rail legible on small screens.
+const PIPELINE: { key: StageKey; label: string }[] = [
+  { key: "applied",      label: "Applied"   },
+  { key: "phone_screen", label: "Screen"    },
+  { key: "interview",    label: "Interview" },
+  { key: "offer",        label: "Offer"     },
+  { key: "hired",        label: "Hired"     },
+];
+
 // Stage colors are functional (status semantics), kept restrained. The single
-// brand accent (#0051d5, and #6690ff on dark) drives everything decorative.
+// brand accent (#0051d5, and #6690ff on dark) is spent only on the decisive
+// moment: the key stat tile and the active filter.
 const STAGE_COLORS: Record<string, string> = {
   applied:      "bg-neutral-100 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700",
   phone_screen: "bg-[#0051d5]/10 text-[#0051d5] border-[#0051d5]/20 dark:bg-[#0051d5]/15 dark:text-[#6690ff] dark:border-[#0051d5]/30",
@@ -46,6 +57,11 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+// Editorial spec-label: Geist Mono, tracked, tabular-nums. Mirrors the landing's
+// SPEC token so eyebrows, tile labels and meta rows read as one system.
+const SPEC =
+  "font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-500";
 
 /* ------------------------------------------------------------------
    CountUp: animates a number into view. Reduced-motion safe (snaps
@@ -83,7 +99,7 @@ function CountUp({ to, duration = 1100 }: { to: number; duration?: number }) {
 /* Content-shaped skeleton so the loading state mirrors the real card. */
 function CardSkeleton() {
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-premium">
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-premium ring-1 ring-black/[0.02] dark:ring-white/[0.03]">
       <div className="flex items-start gap-3.5">
         <div className="w-11 h-11 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse shrink-0" />
         <div className="flex-1 space-y-2.5 pt-1">
@@ -110,13 +126,16 @@ function LoadingGrid() {
   );
 }
 
-/* Composed empty state, accent-tinted tile instead of a flat black square. */
+/* Composed empty state: accent-tinted tile, soft spotlight and a clear CTA so a
+   zero state reads as an invitation rather than a dead end. */
 function EmptyState({
   icon: Icon,
+  eyebrow,
   title,
   children,
 }: {
   icon: typeof Briefcase;
+  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
@@ -125,13 +144,14 @@ function EmptyState({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE }}
-      className="relative overflow-hidden text-center py-20 px-8 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-premium"
+      className="relative overflow-hidden text-center py-20 px-8 rounded-[2rem] border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-premium ring-1 ring-black/[0.02] dark:ring-white/[0.03]"
     >
       <div className="spotlight pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full opacity-70" />
       <div className="relative">
-        <div className="w-16 h-16 rounded-2xl bg-[#0051d5]/10 dark:bg-[#0051d5]/15 border border-[#0051d5]/15 dark:border-[#0051d5]/25 flex items-center justify-center mx-auto mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-[#0051d5]/10 dark:bg-[#0051d5]/15 border border-[#0051d5]/15 dark:border-[#0051d5]/25 flex items-center justify-center mx-auto mb-6 ring-1 ring-inset ring-white/10">
           <Icon className="w-7 h-7 text-[#0051d5] dark:text-[#6690ff]" strokeWidth={1.75} />
         </div>
+        <p className={`${SPEC} mb-3`}>{eyebrow}</p>
         <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white mb-2">
           {title}
         </h3>
@@ -192,7 +212,7 @@ function ApplicationCard({
       exit={{ opacity: 0, scale: 0.96 }}
       whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.4, ease: EASE }}
-      className="group relative overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-premium hover:shadow-premium-lg transition-shadow duration-300 cursor-default"
+      className="group relative overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 ring-1 ring-black/[0.02] dark:ring-white/[0.03] rounded-2xl p-6 shadow-premium hover:shadow-premium-lg transition-shadow duration-300 cursor-default"
     >
       <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -279,7 +299,7 @@ function ApplicationCard({
         )}
       </AnimatePresence>
 
-      <p className="relative text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-3 uppercase tracking-wide">
+      <p className={`relative mt-3 ${SPEC}`}>
         Applied {new Date(app.applied_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
       </p>
     </motion.div>
@@ -296,7 +316,7 @@ function SavedJobCard({ saved, onRemove }: { saved: SavedJob; onRemove: (jobId: 
       exit={{ opacity: 0, scale: 0.96 }}
       whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.4, ease: EASE }}
-      className="group relative overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-premium hover:shadow-premium-lg hover:border-[#0051d5]/30 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300 cursor-default"
+      className="group relative overflow-hidden bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 ring-1 ring-black/[0.02] dark:ring-white/[0.03] rounded-2xl p-6 shadow-premium hover:shadow-premium-lg hover:border-[#0051d5]/30 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300 cursor-default"
     >
       <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
@@ -324,7 +344,7 @@ function SavedJobCard({ saved, onRemove }: { saved: SavedJob; onRemove: (jobId: 
               {saved.job?.salary_range && (
                 <span className="flex items-center gap-1 font-semibold text-neutral-700 dark:text-neutral-200">
                   <DollarSign className="w-3 h-3 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
-                  {saved.job.salary_range}
+                  <span className="font-mono tabular-nums">{saved.job.salary_range}</span>
                 </span>
               )}
             </div>
@@ -340,12 +360,12 @@ function SavedJobCard({ saved, onRemove }: { saved: SavedJob; onRemove: (jobId: 
       </div>
 
       <div className="relative mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-        <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium uppercase tracking-wide">
+        <p className={SPEC}>
           Saved {new Date(saved.saved_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
         </p>
         <Link
           href={`/jobs/${saved.job.id}`}
-          className="flex items-center gap-1 text-xs font-semibold text-neutral-400 dark:text-neutral-500 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors uppercase tracking-wide"
+          className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-400 dark:text-neutral-500 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors"
         >
           View Job <ArrowRight className="w-3 h-3" strokeWidth={1.75} />
         </Link>
@@ -418,6 +438,10 @@ export default function DashboardPage() {
   const inProgress = applications.filter((a) => ["phone_screen", "interview"].includes(a.status)).length;
   const offers = applications.filter((a) => ["offer", "hired"].includes(a.status)).length;
 
+  // Derived pipeline volumes (rejected excluded from the linear funnel).
+  const pipelineCounts = PIPELINE.map((s) => applications.filter((a) => a.status === s.key).length);
+  const pipelineMax = Math.max(1, ...pipelineCounts);
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
@@ -439,10 +463,9 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: EASE }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-500 mb-3">
-              Career Tracker
-            </p>
-            <h1 className="text-5xl md:text-6xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-[0.95] mb-4">
+            <p className={`${SPEC} mb-4`}>Career Tracker</p>
+            {/* Serif page title: the one editorial serif on the app surface. */}
+            <h1 className="font-serif font-medium text-5xl md:text-6xl tracking-tight text-neutral-900 dark:text-white leading-[0.95] mb-4 text-balance">
               My Dashboard
             </h1>
             <p className="text-neutral-400 dark:text-neutral-500 font-medium text-sm">
@@ -450,7 +473,9 @@ export default function DashboardPage() {
             </p>
           </motion.div>
 
-          {/* Stats row */}
+          {/* Stats row: one blue accent tile marks the decisive number
+              (In Progress); the rest stay neutral. Numbers are mono/tabular
+              and count up on resolve. */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -471,8 +496,8 @@ export default function DashboardPage() {
                 whileHover={reduceMotion ? undefined : { y: -4 }}
                 className={`group relative overflow-hidden rounded-2xl p-5 border shadow-premium transition-shadow duration-300 hover:shadow-premium-lg ${
                   stat.accent
-                    ? "bg-[#0051d5] border-[#0051d5]"
-                    : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
+                    ? "bg-[#0051d5] border-[#0051d5] ring-1 ring-inset ring-white/15"
+                    : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 ring-1 ring-black/[0.02] dark:ring-white/[0.03]"
                 }`}
               >
                 {!stat.accent && (
@@ -483,7 +508,7 @@ export default function DashboardPage() {
                 }`}>
                   <CountUp to={stat.value} />
                 </div>
-                <div className={`relative text-[10px] font-semibold uppercase tracking-widest ${
+                <div className={`relative font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums ${
                   stat.accent ? "text-white/70" : "text-neutral-400 dark:text-neutral-500"
                 }`}>
                   {stat.label}
@@ -492,33 +517,55 @@ export default function DashboardPage() {
             ))}
           </motion.div>
 
-          {/* Pipeline bar */}
+          {/* Pipeline: Applied to Hired funnel. Big mono counts, spec-label
+              stages, and a proportional rail whose segments draw in left to
+              right (signature motion, reduced-motion safe). Kept neutral so the
+              lone blue accent stays on the key stat + active filter. */}
           {applications.length > 0 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-8 flex items-center gap-2 overflow-x-auto pb-1"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.5, ease: EASE }}
+              className="mt-12"
             >
-              <TrendingUp className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 shrink-0" strokeWidth={1.75} />
-              {["applied", "phone_screen", "interview", "offer", "hired"].map((stage, i, arr) => {
-                const count = applications.filter((a) => a.status === stage).length;
-                return (
-                  <div key={stage} className="flex items-center gap-2 shrink-0">
-                    <div className="text-center">
-                      <div className={`text-xs font-semibold font-mono tabular-nums ${count > 0 ? "text-neutral-900 dark:text-white" : "text-neutral-300 dark:text-neutral-600"}`}>
+              <div className="flex items-center gap-3 mb-6">
+                <TrendingUp className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" strokeWidth={1.75} />
+                <span className={SPEC}>Pipeline</span>
+                <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                <span className={SPEC}>
+                  <span className="text-neutral-600 dark:text-neutral-300">{applications.length}</span> Tracked
+                </span>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2 sm:gap-4">
+                {PIPELINE.map((stage, i) => {
+                  const count = pipelineCounts[i];
+                  const reached = count > 0;
+                  const pct = (count / pipelineMax) * 100;
+                  return (
+                    <div key={stage.key} className="flex flex-col items-center text-center">
+                      <div className={`font-mono text-3xl sm:text-4xl font-semibold tabular-nums tracking-tight leading-none mb-2 ${
+                        reached ? "text-neutral-900 dark:text-white" : "text-neutral-300 dark:text-neutral-700"
+                      }`}>
                         {count}
                       </div>
-                      <div className="text-[9px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                        {STAGES.find((s) => s.key === stage)?.label}
+                      <div className={`${SPEC} mb-3 leading-tight`}>{stage.label}</div>
+                      <div className="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                        <motion.div
+                          className="h-full rounded-full bg-neutral-800 dark:bg-neutral-300"
+                          initial={{ width: 0 }}
+                          animate={{ width: reached ? `${pct}%` : 0 }}
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.8,
+                            delay: reduceMotion ? 0 : 0.5 + i * 0.08,
+                            ease: EASE,
+                          }}
+                        />
                       </div>
                     </div>
-                    {i < arr.length - 1 && (
-                      <ChevronRight className="w-3 h-3 text-neutral-200 dark:text-neutral-700 shrink-0" strokeWidth={1.75} />
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </motion.div>
           )}
         </div>
@@ -558,7 +605,8 @@ export default function DashboardPage() {
         {/* Applications tab */}
         {activeTab === "applications" && (
           <>
-            {/* Stage filters */}
+            {/* Stage filters: the active pill is the single blue accent here,
+                marking the current selection. Inactive stay neutral. */}
             <div className="flex gap-2 flex-wrap mb-8">
               {[{ key: "all", label: "All" }, ...STAGES].map((s) => (
                 <button
@@ -566,7 +614,7 @@ export default function DashboardPage() {
                   onClick={() => setActiveFilter(s.key as StageKey | "all")}
                   className={`px-4 py-2 rounded-full text-[10px] font-semibold transition-all uppercase tracking-wide ${
                     activeFilter === s.key
-                      ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900"
+                      ? "bg-[#0051d5] text-white border border-[#0051d5] shadow-premium"
                       : "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-400 dark:text-neutral-500 hover:border-neutral-400 dark:hover:border-neutral-600 hover:text-neutral-700 dark:hover:text-neutral-300"
                   }`}
                 >
@@ -578,10 +626,14 @@ export default function DashboardPage() {
             {fetching ? (
               <LoadingGrid />
             ) : filtered.length === 0 ? (
-              <EmptyState icon={Briefcase} title="No applications yet">
+              <EmptyState
+                icon={Briefcase}
+                eyebrow={activeFilter === "all" ? "No applications" : "Nothing in this stage"}
+                title={activeFilter === "all" ? "No applications yet" : "Nothing here yet"}
+              >
                 Browse jobs and hit{" "}
                 <span className="font-semibold text-neutral-900 dark:text-white">Quick Apply</span>{" "}
-                to get started.
+                to start building your pipeline.
               </EmptyState>
             ) : (
               <motion.div layout className="grid sm:grid-cols-2 gap-4">
@@ -606,7 +658,7 @@ export default function DashboardPage() {
             {fetching ? (
               <LoadingGrid />
             ) : savedJobs.length === 0 ? (
-              <EmptyState icon={Bookmark} title="No saved jobs yet">
+              <EmptyState icon={Bookmark} eyebrow="No bookmarks" title="No saved jobs yet">
                 Click the{" "}
                 <span className="font-semibold text-neutral-900 dark:text-white">bookmark icon</span>{" "}
                 on any job to save it here.

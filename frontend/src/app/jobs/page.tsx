@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { X, ArrowRight, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, BarChart3, AlertTriangle, SearchX } from "lucide-react";
+import { X, ArrowRight, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, BarChart3, AlertTriangle, SearchX, SlidersHorizontal } from "lucide-react";
 import { Job, fetchJobs, fetchDepartments, fetchSavedJobs, saveJob, unsaveJob, recordEvent } from "@/lib/api";
 import Header from "@/components/Header";
 import { useJobFeed } from "@/hooks/useJobFeed";
@@ -82,8 +82,9 @@ function FeaturedJobCard({
         animate={{ opacity: 1, y: 0 }}
         whileHover={reduceMotion ? undefined : { y: -4 }}
         transition={{ duration: 0.4, delay: index * 0.08 }}
-        className="group relative bg-neutral-950 text-white p-6 rounded-xl shadow-premium-lg transition-shadow duration-300 flex flex-col overflow-hidden"
+        className="group relative bg-neutral-950 text-white p-6 rounded-2xl shadow-premium-lg edge-highlight ring-1 ring-white/[0.06] transition-shadow duration-300 flex flex-col overflow-hidden"
       >
+        <div className="grain absolute inset-0 pointer-events-none" />
         <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         {scoreReadout}
         <div className="relative flex items-start gap-4 mb-6">
@@ -133,7 +134,7 @@ function FeaturedJobCard({
       animate={{ opacity: 1, y: 0 }}
       whileHover={reduceMotion ? undefined : { y: -4 }}
       transition={{ duration: 0.4, delay: index * 0.08 }}
-      className="group relative bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-premium hover:shadow-premium-lg border border-transparent hover:border-[#0051d5]/20 dark:hover:border-[#0051d5]/30 transition-[box-shadow,border-color] duration-300 flex flex-col overflow-hidden"
+      className="group relative bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-premium hover:shadow-premium-lg border border-neutral-200/70 dark:border-white/[0.06] hover:border-[#0051d5]/25 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300 flex flex-col overflow-hidden"
     >
       <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       {scoreReadout}
@@ -223,7 +224,7 @@ function JobListRow({
       <div className="relative flex items-center gap-4 mt-4 md:mt-0">
         {score != null && (
           <div className="flex flex-col items-end leading-none">
-            <span className="text-[0.6rem] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-1">
+            <span className="font-mono text-[9px] text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.18em] tabular-nums mb-1">
               Match Score
             </span>
             <span className={`font-mono text-sm font-semibold tabular-nums ${strong ? "text-[#0051d5] dark:text-[#6690ff]" : "text-neutral-900 dark:text-white"}`}>
@@ -429,6 +430,8 @@ export default function JobsPage() {
   };
 
   const hasFilters = department || seniority || salaryMin > 0;
+  const activeFilterCount =
+    (department ? 1 : 0) + (seniority ? 1 : 0) + (salaryMin > 0 ? 1 : 0);
   // Only surface the featured bento grid when there are enough results to also
   // fill a list below it — otherwise show everything as list rows.
   const useFeatured = page === 1 && jobs.length >= 4;
@@ -454,22 +457,59 @@ export default function JobsPage() {
         )}
       </AnimatePresence>
 
-      {/* Two-column layout */}
-      <main className="pt-24 pb-16 px-6 md:px-12 max-w-[1440px] mx-auto flex flex-col md:flex-row gap-12">
+      {/* Editorial masthead + two-column layout */}
+      <main className="pt-24 pb-16 px-6 md:px-12 max-w-[1440px] mx-auto">
+
+        {/* ── MASTHEAD ── */}
+        <header className="mb-12 md:mb-16 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+          <div className="max-w-2xl">
+            <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500 dark:text-neutral-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5]" />
+              Live opportunity feed
+            </span>
+            <h1 className="mt-5 font-serif text-4xl md:text-6xl font-medium leading-[1.02] tracking-tight text-neutral-950 dark:text-white text-balance">
+              Roles that fit your trajectory.
+            </h1>
+            <p className="mt-5 max-w-xl text-base text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">
+              Every opening, ranked by how closely it matches your experience and
+              refreshed the moment new roles land.
+            </p>
+          </div>
+          {total > 0 && (
+            <div className="shrink-0 text-left lg:text-right lg:border-l border-neutral-200 dark:border-neutral-800 lg:pl-8">
+              <div className="font-mono text-4xl font-semibold tabular-nums text-neutral-900 dark:text-white leading-none">
+                {total}
+              </div>
+              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-600">
+                Open roles indexed
+              </div>
+            </div>
+          )}
+        </header>
+
+        <div className="flex flex-col md:flex-row gap-12">
 
         {/* ── SIDEBAR ── */}
         <aside className="w-full md:w-72 flex-shrink-0 space-y-10">
 
           {/* Discovery Filters */}
           <div>
-            <h3 className="text-xs uppercase tracking-[0.1em] font-bold text-neutral-500 dark:text-neutral-400 mb-6">
-              Discovery Filters
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500 dark:text-neutral-400">
+                <SlidersHorizontal className="w-3.5 h-3.5" strokeWidth={1.75} />
+                Discovery Filters
+              </h3>
+              {activeFilterCount > 0 && (
+                <span className="font-mono text-[10px] tabular-nums text-[#0051d5] dark:text-[#6690ff]">
+                  {activeFilterCount} active
+                </span>
+              )}
+            </div>
             <div className="space-y-8">
 
               {/* Industry */}
               <div>
-                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                <label className="block font-mono text-[10px] text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em] mb-3">
                   Industry
                 </label>
                 <select
@@ -486,7 +526,7 @@ export default function JobsPage() {
 
               {/* Popular quick-filters — single-select, synced with Industry above */}
               <div>
-                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                <label className="block font-mono text-[10px] text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em] mb-3">
                   Popular
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -513,7 +553,7 @@ export default function JobsPage() {
 
               {/* Minimum Salary */}
               <div>
-                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                <label className="block font-mono text-[10px] text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em] mb-3">
                   Minimum Salary (USD)
                 </label>
                 <input
@@ -528,7 +568,7 @@ export default function JobsPage() {
                 />
                 <div className="flex justify-between mt-2 text-[0.7rem] font-medium text-neutral-500 dark:text-neutral-400">
                   <span>Any</span>
-                  <span className="text-neutral-900 dark:text-white font-mono font-semibold tabular-nums">
+                  <span className={`font-mono font-semibold tabular-nums ${salaryMin > 0 ? "text-[#0051d5] dark:text-[#6690ff]" : "text-neutral-900 dark:text-white"}`}>
                     {salaryMin === 0 ? "Any" : `${formatSalary(salaryMin)}+`}
                   </span>
                   <span className="font-mono tabular-nums">$300k+</span>
@@ -537,7 +577,7 @@ export default function JobsPage() {
 
               {/* Experience */}
               <div>
-                <label className="block text-[0.75rem] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+                <label className="block font-mono text-[10px] text-neutral-500 dark:text-neutral-400 uppercase tracking-[0.18em] mb-3">
                   Experience
                 </label>
                 <select
@@ -569,9 +609,16 @@ export default function JobsPage() {
           </div>
 
           {/* AI Insight Widget */}
-          <div className="bg-neutral-950 dark:bg-neutral-900 p-6 rounded-xl text-white">
-            <div className="w-8 h-8 bg-[#0051d5]/20 rounded-lg flex items-center justify-center mb-4">
-              <BarChart3 className="w-4 h-4 text-[#6690ff]" strokeWidth={1.75} />
+          <div className="relative overflow-hidden bg-neutral-950 dark:bg-neutral-900 p-6 rounded-2xl text-white edge-highlight ring-1 ring-white/[0.06]">
+            <div className="grain absolute inset-0 pointer-events-none" />
+            <div className="relative z-10">
+            <div className="flex items-center justify-between mb-5">
+              <div className="w-8 h-8 bg-[#0051d5]/20 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-[#6690ff]" strokeWidth={1.75} />
+              </div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-white/40">
+                PathAI Index
+              </span>
             </div>
             <p className="text-sm leading-relaxed font-medium text-white/80">
               PathAI has indexed{" "}
@@ -600,6 +647,7 @@ export default function JobsPage() {
                 <span className="text-white/50">Connecting to live feed…</span>
               )}
             </p>
+            </div>
           </div>
         </aside>
 
@@ -607,45 +655,53 @@ export default function JobsPage() {
         <section ref={listRef} className="flex-1 min-w-0 scroll-mt-28">
 
           {loading ? (
-            /* Skeleton */
+            /* Skeleton shaped like the real feed: bento grid + list rows */
             <div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`p-6 rounded-xl animate-pulse ${
-                      i === 1
-                        ? "bg-neutral-800"
-                        : "bg-white dark:bg-neutral-900"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 mb-6">
-                      <div className="w-12 h-12 rounded-xl bg-neutral-200 dark:bg-neutral-700 shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-neutral-200 dark:bg-neutral-700 rounded w-3/4" />
-                        <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-1/2" />
+                {Array.from({ length: 3 }).map((_, i) => {
+                  const dark = i === 1;
+                  const block = dark ? "bg-white/10" : "bg-neutral-200 dark:bg-neutral-800";
+                  return (
+                    <div
+                      key={i}
+                      className={`p-6 rounded-2xl overflow-hidden animate-pulse ${
+                        dark
+                          ? "bg-neutral-900 ring-1 ring-white/[0.06]"
+                          : "bg-white dark:bg-neutral-900 shadow-premium ring-1 ring-neutral-200/70 dark:ring-white/[0.06]"
+                      }`}
+                    >
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className={`w-12 h-12 rounded-xl shrink-0 ${block}`} />
+                        <div className="flex-1 space-y-2">
+                          <div className={`h-4 rounded w-3/4 ${block}`} />
+                          <div className={`h-3 rounded w-1/2 ${block}`} />
+                        </div>
                       </div>
+                      <div className="flex gap-2 mb-6">
+                        <div className={`h-5 w-16 rounded-full ${block}`} />
+                        <div className={`h-5 w-20 rounded-full ${block}`} />
+                      </div>
+                      <div className={`h-9 rounded-lg ${block}`} />
                     </div>
-                    <div className="h-9 bg-neutral-200 dark:bg-neutral-700 rounded-lg" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <div>
+              <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex justify-between items-center p-4 border-b border-neutral-200 dark:border-neutral-800 animate-pulse"
+                    className="flex justify-between items-center p-4 rounded-xl bg-white dark:bg-neutral-900 shadow-premium ring-1 ring-neutral-200/70 dark:ring-white/[0.06] animate-pulse"
                   >
                     <div className="flex gap-4 items-center">
-                      <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800" />
+                      <div className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-neutral-800" />
                       <div className="space-y-2">
-                        <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-44" />
-                        <div className="h-3 bg-neutral-100 dark:bg-neutral-800 rounded w-28" />
+                        <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-44" />
+                        <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-28" />
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
-                      <div className="h-8 w-12 bg-neutral-100 dark:bg-neutral-800 rounded" />
-                      <div className="h-8 w-16 bg-neutral-100 dark:bg-neutral-800 rounded-lg" />
+                      <div className="h-8 w-12 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                      <div className="h-8 w-16 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
                     </div>
                   </div>
                 ))}
@@ -655,13 +711,16 @@ export default function JobsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-32 gap-3"
+              className="flex flex-col items-center justify-center py-32 gap-4 text-center"
             >
-              <div className="w-16 h-16 rounded-xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-950/40 ring-1 ring-red-100 dark:ring-red-900/40 flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-red-500 dark:text-red-400" strokeWidth={1.75} />
               </div>
-              <p className="text-lg font-semibold">Couldn&apos;t reach the server</p>
-              <p className="text-sm text-neutral-400 text-center max-w-xs">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-600">
+                Connection error
+              </span>
+              <p className="text-lg font-semibold -mt-1">Couldn&apos;t reach the server</p>
+              <p className="text-sm text-neutral-400 max-w-xs">
                 The job service isn&apos;t responding. It may be starting up or temporarily down.
               </p>
               <button
@@ -675,12 +734,15 @@ export default function JobsPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-32 gap-3"
+              className="flex flex-col items-center justify-center py-32 gap-4 text-center"
             >
-              <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 ring-1 ring-neutral-200/70 dark:ring-white/[0.06] flex items-center justify-center">
                 <SearchX className="w-6 h-6 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               </div>
-              <p className="text-lg font-semibold">No positions found</p>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-600">
+                No results
+              </span>
+              <p className="text-lg font-semibold -mt-1">No positions found</p>
               <p className="text-sm text-neutral-400">Try adjusting your filters</p>
               {hasFilters && (
                 <button
@@ -698,18 +760,19 @@ export default function JobsPage() {
                 <div className="mb-16">
                   <div className="flex justify-between items-end mb-8">
                     <div>
-                      <span className="text-[0.75rem] font-bold text-[#0051d5] uppercase tracking-[0.1em] mb-2 block">
-                        Prioritized For You
+                      <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500 dark:text-neutral-400 mb-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5]" />
+                        Prioritized for you
                       </span>
-                      <h2 className="text-3xl font-extrabold tracking-tighter text-neutral-950 dark:text-white">
+                      <h2 className="text-2xl font-semibold tracking-tight text-neutral-950 dark:text-white">
                         Immediate Matches
                       </h2>
                     </div>
                     <a
                       href="#recent"
-                      className="text-[#0051d5] dark:text-[#6690ff] font-semibold text-sm hover:underline underline-offset-4 hidden sm:block"
+                      className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500 dark:text-neutral-400 border-b border-neutral-300 dark:border-neutral-700 pb-1 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-900 dark:hover:border-white transition-colors"
                     >
-                      Browse All Matches
+                      Browse all
                     </a>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -729,11 +792,14 @@ export default function JobsPage() {
               {/* Recent Openings — simple list */}
               {listJobs.length > 0 && (
                 <section id="recent">
-                  <div className="flex items-center gap-4 mb-8">
-                    <h2 className="text-2xl font-extrabold tracking-tighter text-neutral-950 dark:text-white whitespace-nowrap">
+                  <div className="flex items-center gap-4 mb-6">
+                    <h2 className="text-xl font-semibold tracking-tight text-neutral-950 dark:text-white whitespace-nowrap">
                       Recent Openings
                     </h2>
-                    <div className="h-[2px] flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                    <div className="h-px flex-1 bg-neutral-200 dark:bg-neutral-800" />
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-600 whitespace-nowrap">
+                      {total} roles
+                    </span>
                   </div>
                   <div className="space-y-3">
                     {listJobs.map((job, i) => (
@@ -758,6 +824,7 @@ export default function JobsPage() {
             </>
           )}
         </section>
+        </div>
       </main>
 
       {/* Footer */}

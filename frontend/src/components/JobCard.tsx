@@ -182,7 +182,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
         animate={{ opacity: 1, y: 0 }}
         whileHover={reduceMotion ? undefined : { y: -4 }}
         transition={{ duration: 0.4, delay: index * 0.04, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="group relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-premium hover:shadow-premium-lg hover:border-[#0051d5]/25 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300"
+        className="group relative bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/70 dark:border-gray-700/70 overflow-hidden shadow-premium hover:shadow-premium-lg hover:border-[#0051d5]/25 dark:hover:border-[#0051d5]/40 transition-[box-shadow,border-color] duration-300"
       >
         <div className="spotlight pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <div className="relative px-5 pt-5 pb-4">
@@ -239,15 +239,15 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
           {/* ── META ROW ─────────────────────────────────── */}
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+              <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" strokeWidth={1.75} />
               {job.location}
             </span>
             <span className="flex items-center gap-1.5 font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-200">
-              <DollarSign className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+              <DollarSign className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" strokeWidth={1.75} />
               {job.salary_range}
             </span>
             <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+              <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" strokeWidth={1.75} />
               {timeAgo(job.posted_date)}
             </span>
           </div>
@@ -293,11 +293,11 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     {/* Quick stats */}
                     <div className="flex flex-wrap gap-2">
                       <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
-                        <Briefcase className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                        <Briefcase className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" strokeWidth={1.75} />
                         {summary.role_type}
                       </span>
                       <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
-                        <Users className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                        <Users className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" strokeWidth={1.75} />
                         {summary.experience_level}
                       </span>
                       {summary.highlights.slice(0, 2).map((h) => (
@@ -311,7 +311,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     {/* Required skills */}
                     {summary.required_skills.length > 0 && (
                       <div>
-                        <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">
+                        <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em] mb-2">
                           Required Skills
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -333,7 +333,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     {/* Nice to have */}
                     {summary.nice_to_have.length > 0 && (
                       <div>
-                        <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">
+                        <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em] mb-2">
                           Nice to Have
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -349,7 +349,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
                     {/* Skill gap match */}
                     {skillGap && (skillGap.matching_skills.length > 0 || skillGap.missing_skills.length > 0) && (
                       <div>
-                        <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">
+                        <p className="font-mono text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-[0.18em] mb-2">
                           Your Match
                         </p>
                         <div className="flex flex-wrap gap-1.5">
@@ -415,7 +415,7 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
               <>
                 {isApplied ? (
                   <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-transparent dark:border-emerald-700">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Applied
+                    <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.75} /> Applied
                   </span>
                 ) : job.source === "adzuna" && job.external_url ? (
                   <motion.button

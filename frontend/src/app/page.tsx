@@ -7,7 +7,6 @@ import {
   useSpring,
   useTransform,
   useReducedMotion,
-  LayoutGroup,
   type Variants,
 } from "framer-motion";
 import {
@@ -229,10 +228,11 @@ const EVENTS = [
   { code: "EVT·04", title: "Interview request sent",         meta: "Thu · 2:00 PM Pacific",              time: "now"  },
 ];
 
-/** Step 01: parse ledger + shared-layout token lift.
+/** Step 01: parse ledger.
  *  A blue caret steps DOWN the resume line by line, drawing a baseline under
- *  the current row. When parsing completes, the skill tokens fly (shared-layout
- *  FLIP) out of the resume and settle into a dotted-leader ledger. */
+ *  the current row. As parsing completes the resume skills highlight in place
+ *  and the Extracted Signals ledger fills in row by row (name settles in, score
+ *  fades), staggered. No cross-container motion. */
 function ResumeScanner() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
@@ -281,7 +281,6 @@ function ResumeScanner() {
           <span className={SPEC}>{done ? "COMPLETE" : "READING"}</span>
         </div>
 
-        <LayoutGroup>
           {/* Resume, read as a ledger: no window chrome, no scan sweep */}
           <div className="relative flex-1 rounded-2xl border border-white/[0.06] bg-neutral-950/40 overflow-hidden">
             <div className="py-1">
@@ -341,22 +340,17 @@ function ResumeScanner() {
                         <>
                           <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-neutral-500 mb-2">Core Skills</div>
                           <div className="flex flex-wrap items-center gap-x-1 gap-y-1 min-h-[18px]">
-                            {!done ? (
-                              SIGNALS.map((s, k) => (
-                                <span key={s.name} className="inline-flex items-center text-[10px] font-medium tracking-tight leading-none">
-                                  <motion.span
-                                    layoutId={`sig-${s.name}`}
-                                    className="rounded px-1 py-0.5 text-neutral-300"
-                                    transition={{ layout: { duration: reduceMotion ? 0 : 0.55, ease: [0.25, 0.46, 0.45, 0.94] } }}
-                                  >
-                                    {s.name}
-                                  </motion.span>
-                                  {k < SIGNALS.length - 1 && <span className="text-neutral-700 px-0.5">·</span>}
+                            {SIGNALS.map((s, k) => (
+                              <span key={s.name} className="inline-flex items-center text-[10px] font-medium tracking-tight leading-none">
+                                <span
+                                  className="rounded px-1 py-0.5 transition-colors duration-500"
+                                  style={{ color: done ? "#6690ff" : "#d4d4d8" }}
+                                >
+                                  {s.name}
                                 </span>
-                              ))
-                            ) : (
-                              <span className="font-mono text-[9px] tracking-[0.14em] text-neutral-600">6 SIGNALS LIFTED →</span>
-                            )}
+                                {k < SIGNALS.length - 1 && <span className="text-neutral-700 px-0.5">·</span>}
+                              </span>
+                            ))}
                           </div>
                         </>
                       )}
@@ -386,23 +380,22 @@ function ResumeScanner() {
               <p className={SPEC}>Extracted Signals</p>
             </div>
             <div className="flex flex-col gap-1.5">
-              {SIGNALS.map((s) => (
+              {SIGNALS.map((s, k) => (
                 <div key={s.name} className="flex items-baseline gap-2">
-                  {done && (
-                    <motion.span
-                      layoutId={`sig-${s.name}`}
-                      className="text-[11px] font-medium tracking-tight text-white/90 shrink-0"
-                      transition={{ layout: { duration: reduceMotion ? 0 : 0.55, ease: [0.25, 0.46, 0.45, 0.94] } }}
-                    >
-                      {s.name}
-                    </motion.span>
-                  )}
+                  <motion.span
+                    className="text-[11px] font-medium tracking-tight text-white/90 shrink-0"
+                    initial={false}
+                    animate={{ opacity: done ? 1 : 0, x: done ? 0 : -4 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.35, delay: reduceMotion ? 0 : k * 0.09, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  >
+                    {s.name}
+                  </motion.span>
                   <span className="flex-1 translate-y-[-3px] border-b border-dotted border-white/15" />
                   <motion.span
                     className="font-mono text-[11px] tabular-nums text-[#6690ff] shrink-0"
                     initial={false}
                     animate={{ opacity: done ? 1 : 0 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.4, delay: reduceMotion ? 0 : 0.15 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.35, delay: reduceMotion ? 0 : k * 0.09 + 0.12 }}
                   >
                     {s.score}
                   </motion.span>
@@ -413,7 +406,6 @@ function ResumeScanner() {
               &ldquo;It read the trajectory, not just the keywords.&rdquo;
             </p>
           </div>
-        </LayoutGroup>
       </div>
     </div>
   );

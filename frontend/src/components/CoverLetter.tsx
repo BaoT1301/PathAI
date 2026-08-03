@@ -6,6 +6,9 @@ import { X, Loader2, FileText, Copy, Check, Upload, RefreshCw, CircleCheck } fro
 import { Job, generateCoverLetter, fetchSavedResume, uploadResume, SavedResume } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
+/* Shared editorial spec-label: Geist Mono, tracked, tabular. */
+const SPEC = "font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-500";
+
 interface CoverLetterProps {
   job: Job;
   onClose: () => void;
@@ -127,17 +130,17 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
         exit={reduceMotion ? { opacity: 0 } : { y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 32 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-neutral-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-premium-lg border border-neutral-200/70 dark:border-neutral-800 flex flex-col max-h-[90vh]"
+        className="bg-white dark:bg-neutral-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-premium-lg edge-highlight ring-1 ring-neutral-200/70 dark:ring-white/[0.06] border border-neutral-200/70 dark:border-neutral-800 flex flex-col max-h-[90vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#0051d5]/10 dark:bg-[#0051d5]/20 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 bg-[#0051d5]/10 dark:bg-[#0051d5]/20 rounded-xl flex items-center justify-center shrink-0">
               <FileText className="text-[#0051d5] dark:text-[#6690ff]" style={{ width: 18, height: 18 }} strokeWidth={1.75} />
             </div>
-            <div>
-              <h2 className="font-semibold text-neutral-900 dark:text-white text-sm tracking-tight">Cover Letter</h2>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 truncate max-w-[220px]">
+            <div className="min-w-0">
+              <p className={`${SPEC} mb-0.5`}>AI Cover Letter</p>
+              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 truncate max-w-[220px]">
                 {job.title} · {job.company}
               </p>
             </div>
@@ -227,9 +230,12 @@ export default function CoverLetter({ job, onClose }: CoverLetterProps) {
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={handleDrop}
-                  animate={{ borderColor: dragOver ? "#0051d5" : "#e5e7eb" }}
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-2xl px-6 py-10 flex flex-col items-center gap-3 cursor-pointer hover:border-[#0051d5]/50 dark:hover:border-[#6690ff]/50 hover:bg-[#0051d5]/[0.03] dark:hover:bg-[#0051d5]/10 transition-all"
+                  className={`border-2 border-dashed rounded-2xl px-6 py-10 flex flex-col items-center gap-3 cursor-pointer transition-all ${
+                    dragOver
+                      ? "border-[#0051d5] bg-[#0051d5]/[0.04] dark:bg-[#0051d5]/10"
+                      : "border-neutral-200 dark:border-neutral-700 hover:border-[#0051d5]/50 dark:hover:border-[#6690ff]/50 hover:bg-[#0051d5]/[0.03] dark:hover:bg-[#0051d5]/10"
+                  }`}
                 >
                   {uploading ? (
                     <>

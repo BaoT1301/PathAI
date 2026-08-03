@@ -8,6 +8,12 @@ import Header from "@/components/Header";
 import CompanyLogo from "@/components/CompanyLogo";
 import { PathMark } from "@/components/Logo";
 
+/* Shared editorial vocabulary with the landing page: a mono "spec-label"
+   for eyebrows, step markers and status text. Uppercase, wide tracking,
+   tabular numerals, quiet neutral color everywhere it appears. */
+const SPEC =
+  "font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500";
+
 function FadeUp({
   children,
   delay = 0,
@@ -37,8 +43,9 @@ const FEATURED_MATCHES = [
   { company: "OpenAI", role: "AI Research Lead", score: 94 },
   { company: "Anthropic", role: "ML Architect", score: 91 },
 ];
+const TOP_MATCH_SCORE = Math.max(...FEATURED_MATCHES.map((m) => m.score));
 
-/* Real capability statements replace fabricated stat counters. */
+/* Real capability statements, no fabricated counters. */
 const CAPABILITIES = [
   {
     title: "Semantic matching",
@@ -72,34 +79,34 @@ const PHILOSOPHY = [
   },
 ];
 
-
 export default function AboutPage() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#191c1d]">
+    <div className="relative min-h-screen bg-white text-neutral-900 overflow-x-hidden">
       <Header />
 
-      <main className="pt-32 pb-24">
-
-        {/* Hero */}
-        <header className="max-w-[1440px] mx-auto px-6 md:px-12 mb-32">
+      <main className="pt-32">
+        {/* ============================================================
+            HERO
+            ============================================================ */}
+        <header className="max-w-[1440px] mx-auto px-6 md:px-12 pb-28 md:pb-36">
           <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 md:col-span-8">
+            <div className="col-span-12 md:col-span-9 lg:col-span-8">
               <motion.span
-                className="inline-block px-4 py-1.5 rounded-full bg-[#0051d5] text-white font-semibold text-[0.75rem] uppercase tracking-[0.05em] mb-6"
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className={`${SPEC} block`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
                 Our Mission
               </motion.span>
 
               <motion.h1
-                className="text-[3.5rem] md:text-[5rem] font-bold leading-[1.05] tracking-[-0.03em] text-balance text-black mb-8"
+                className="font-serif font-medium text-5xl md:text-7xl leading-[1.02] tracking-tight text-balance text-neutral-900 mt-6 mb-8"
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: 0.7, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 The editorial lens for your{" "}
                 <motion.span
@@ -113,36 +120,36 @@ export default function AboutPage() {
               </motion.h1>
 
               <motion.p
-                className="text-xl text-[#45474b] max-w-2xl leading-relaxed text-balance"
+                className="text-xl text-neutral-500 font-medium max-w-2xl leading-relaxed text-balance"
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.42, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: 0.6, delay: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 PathAI is more than a job board. We are the Intelligent Curator, leveraging
                 large-scale language models to decode the complexities of the labor market for
                 elite talent.
               </motion.p>
 
-              {/* Capability statements (not fabricated counters) */}
+              {/* Capability statements, styled as the same spec-labelled ledger
+                  used for the process steps on the landing page. */}
               <motion.div
-                className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-14 pt-10 border-t border-[#e2e4e6]"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-10 mt-16 pt-10 border-t border-neutral-200/70"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.58 }}
+                transition={{ duration: 0.6, delay: 0.55 }}
               >
                 {CAPABILITIES.map(({ title, desc }, i) => (
                   <motion.div
                     key={title}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.62 + i * 0.1 }}
-                    className="pl-4 border-l-2 border-[#0051d5]/30"
+                    transition={{ duration: 0.4, delay: 0.6 + i * 0.1 }}
                   >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5] shrink-0" />
-                      <div className="text-sm font-semibold tracking-tight text-black">{title}</div>
+                    <span className={`${SPEC} mb-3 block`}>{`Capability 0${i + 1}`}</span>
+                    <div className="text-base font-semibold tracking-tight text-neutral-900 mb-2">
+                      {title}
                     </div>
-                    <div className="text-sm text-[#76777b] leading-relaxed">{desc}</div>
+                    <div className="text-sm text-neutral-500 leading-relaxed">{desc}</div>
                   </motion.div>
                 ))}
               </motion.div>
@@ -150,66 +157,90 @@ export default function AboutPage() {
           </div>
         </header>
 
-        {/* Philosophy */}
-        <section className="max-w-[1440px] mx-auto px-6 md:px-12 mb-40">
-          <div className="grid grid-cols-12 gap-6 items-center">
-
-            {/* Left: real matches panel */}
+        {/* ============================================================
+            PHILOSOPHY
+            ============================================================ */}
+        <section className="max-w-[1440px] mx-auto px-6 md:px-12 pb-28 md:pb-36">
+          <div className="grid grid-cols-12 gap-6 lg:gap-16 items-center">
+            {/* Left: live matches panel */}
             <FadeUp className="col-span-12 md:col-span-5 order-2 md:order-1 relative" delay={0.05}>
-              <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-neutral-900 border border-white/[0.06] shadow-premium-lg relative flex flex-col">
-                {/* Header */}
-                <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <motion.div
-                      className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
-                      animate={reduceMotion ? {} : { opacity: [1, 0.4, 1] }}
-                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                      Live Matches
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/10">
-                      <PathMark className="w-3 h-3 text-white" />
-                    </span>
-                    <span className="text-white font-semibold text-sm tracking-tight">PathAI</span>
-                  </div>
-                </div>
+              <div className="relative aspect-[4/5] rounded-[1.75rem] overflow-hidden bg-neutral-900 ring-1 ring-white/[0.06] edge-highlight shadow-premium-lg flex flex-col">
+                <div className="grain absolute inset-0 pointer-events-none" />
 
-                {/* Match rows: real logos via CompanyLogo */}
-                <div className="flex-1 flex flex-col justify-center gap-3 px-6 py-6">
-                  {FEATURED_MATCHES.map(({ company, role, score }) => (
-                    <div
-                      key={company}
-                      className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10"
-                    >
-                      <CompanyLogo company={company} className="w-10 h-10 rounded-lg" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white text-sm font-semibold truncate">{role}</div>
-                        <div className="text-white/40 text-xs truncate mt-0.5">{company}</div>
-                      </div>
-                      <div className="text-[#6690ff] font-semibold font-mono tabular-nums text-base shrink-0">
-                        {score}%
-                      </div>
+                <div className="relative z-10 flex h-full flex-col">
+                  {/* Header */}
+                  <div className="px-6 py-5 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <motion.span
+                        className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
+                        animate={reduceMotion ? {} : { opacity: [1, 0.4, 1] }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <span className={SPEC}>Live Matches</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5 rounded-md bg-white/10">
+                        <PathMark className="w-3 h-3 text-white" />
+                      </span>
+                      <span className="text-white font-semibold text-sm tracking-tight">PathAI</span>
+                    </div>
+                  </div>
 
-                {/* Footer */}
-                <div className="px-6 py-5 border-t border-white/10 shrink-0">
-                  <p className="text-white/30 text-[11px] leading-relaxed">
-                    The Intelligent Curator, scoring every role against your career trajectory.
-                  </p>
+                  {/* Match rows: real logos via CompanyLogo, blue reserved for the
+                      single decisive row (the top-ranked match). */}
+                  <div className="flex-1 flex flex-col justify-center gap-3 px-6 py-6">
+                    {FEATURED_MATCHES.map(({ company, role, score }) => {
+                      const isTop = score === TOP_MATCH_SCORE;
+                      return (
+                        <div
+                          key={company}
+                          className={`relative flex items-center gap-3.5 p-3.5 rounded-2xl border transition-colors ${
+                            isTop ? "border-[#0051d5]/30 bg-[#0051d5]/[0.06]" : "border-white/10 bg-white/[0.03]"
+                          }`}
+                        >
+                          {isTop && (
+                            <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-[#0051d5]" />
+                          )}
+                          <CompanyLogo company={company} className="w-10 h-10 rounded-lg" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="text-white text-sm font-semibold truncate">{role}</div>
+                              {isTop && (
+                                <span className="shrink-0 inline-flex items-center rounded-md bg-[#0051d5]/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold tabular-nums text-[#6690ff] leading-none">
+                                  #1
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-white/40 text-xs truncate mt-0.5">{company}</div>
+                          </div>
+                          <div
+                            className={`font-mono tabular-nums font-semibold text-base shrink-0 ${
+                              isTop ? "text-[#6690ff]" : "text-white/45"
+                            }`}
+                          >
+                            {score}%
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-6 py-5 border-t border-white/[0.06] shrink-0">
+                    <p className="font-serif italic text-[13px] leading-snug text-neutral-500">
+                      &ldquo;The Intelligent Curator, scoring every role against your career
+                      trajectory.&rdquo;
+                    </p>
+                  </div>
                 </div>
               </div>
               {/* Quote card */}
               <motion.div
-                className="absolute -bottom-8 -right-8 p-8 bg-white rounded-2xl border border-neutral-200/70 shadow-premium-lg hidden md:block max-w-[280px]"
+                className="absolute -bottom-8 -right-8 p-8 bg-white rounded-2xl ring-1 ring-neutral-200/70 shadow-premium-lg hidden md:block max-w-[280px]"
                 whileHover={reduceMotion ? undefined : { y: -4 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="text-sm font-medium italic text-[#45474b] leading-relaxed">
+                <p className="font-serif italic text-base leading-relaxed text-neutral-600">
                   &ldquo;Intelligence is not just data collection; it is the art of discerning what
                   matters.&rdquo;
                 </p>
@@ -218,23 +249,30 @@ export default function AboutPage() {
 
             {/* Right: principles */}
             <FadeUp
-              className="col-span-12 md:col-start-7 md:col-span-6 order-1 md:order-2 mb-12 md:mb-0"
+              className="col-span-12 md:col-start-7 md:col-span-6 order-1 md:order-2 mb-16 md:mb-0"
               delay={0.1}
             >
-              <h2 className="text-4xl font-semibold tracking-tight text-balance mb-8">Our Philosophy</h2>
-              <div className="space-y-8">
-                {PHILOSOPHY.map(({ icon: Icon, title, desc }) => (
+              <span className={`${SPEC} block mb-5`}>Why It Matters · 03 Principles</span>
+              <h2 className="font-serif font-medium text-4xl md:text-5xl tracking-tight text-balance mb-10 text-neutral-900">
+                Our Philosophy
+              </h2>
+              <div className="space-y-10">
+                {PHILOSOPHY.map(({ icon: Icon, title, desc }, i) => (
                   <motion.div
                     key={title}
                     whileHover={reduceMotion ? undefined : { x: 6 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className="group cursor-default"
                   >
-                    <h3 className="text-lg font-semibold tracking-tight mb-3 flex items-center gap-2.5">
-                      <Icon className="w-5 h-5 text-[#0051d5] shrink-0" strokeWidth={1.75} />
+                    <div className="flex items-center gap-4 mb-4">
+                      <span className={SPEC}>{`0${i + 1}`}</span>
+                      <span className="flex-1 h-px bg-neutral-200" />
+                      <Icon className="w-[18px] h-[18px] text-neutral-400 shrink-0" strokeWidth={1.75} />
+                    </div>
+                    <h3 className="font-serif font-medium text-2xl tracking-tight text-balance mb-3 text-neutral-900">
                       {title}
                     </h3>
-                    <p className="text-[#45474b] leading-relaxed">{desc}</p>
+                    <p className="text-neutral-500 leading-relaxed max-w-md">{desc}</p>
                   </motion.div>
                 ))}
               </div>
@@ -242,21 +280,26 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Technology Bento */}
-        <section className="bg-[#f3f4f5] py-32 mb-40">
+        {/* ============================================================
+            HOW MATCHING WORKS
+            ============================================================ */}
+        <section className="bg-neutral-50 py-32 md:py-40">
           <div className="max-w-[1440px] mx-auto px-6 md:px-12">
-            <FadeUp className="text-center mb-20">
-              <span className="text-[#0051d5] text-[0.75rem] uppercase tracking-[0.1em] font-semibold">
-                Technology Stack
-              </span>
-              <h2 className="text-4xl font-semibold tracking-tight text-balance mt-4">The Intelligent Curator</h2>
+            <FadeUp className="max-w-2xl mb-20">
+              <span className={`${SPEC} block mb-5`}>How Matching Works · 03 Steps</span>
+              <h2 className="font-serif font-medium text-4xl md:text-6xl tracking-tight text-balance mb-6 text-neutral-900">
+                The Intelligent Curator.
+              </h2>
+              <p className="text-lg text-neutral-500 font-medium leading-relaxed max-w-xl">
+                Three systems run on every resume: language models that read context, a
+                transparent scoring layer, and an editorial pass across the market.
+              </p>
             </FadeUp>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              {/* LLM Core, 2 cols */}
+              {/* Step 01: LLM reasoning, 2 cols */}
               <motion.div
-                className="md:col-span-2 bg-white border border-neutral-200/70 p-10 rounded-3xl shadow-premium flex flex-col justify-between cursor-default"
+                className="md:col-span-2 bg-white ring-1 ring-neutral-200/70 p-10 md:p-12 rounded-3xl shadow-premium flex flex-col justify-between cursor-default"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
@@ -264,81 +307,100 @@ export default function AboutPage() {
                 whileHover={reduceMotion ? undefined : { y: -6 }}
               >
                 <div>
-                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-8">
-                    <Network className="text-white w-5 h-5" strokeWidth={1.75} />
+                  <div className="flex items-center gap-4 mb-8">
+                    <span className={SPEC}>Step 01</span>
+                    <span className="flex-1 h-px bg-neutral-200" />
+                    <Network className="w-[18px] h-[18px] text-neutral-400 shrink-0" strokeWidth={1.75} />
                   </div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-balance mb-4">LLM Semantic Reasoning</h3>
-                  <p className="text-[#45474b] text-lg leading-relaxed max-w-xl">
+                  <h3 className="font-serif font-medium text-2xl md:text-3xl tracking-tight text-balance mb-4 text-neutral-900">
+                    LLM Semantic Reasoning
+                  </h3>
+                  <p className="text-neutral-500 text-lg leading-relaxed max-w-xl">
                     Our core engine uses customized Large Language Models to read between the lines
                     of job descriptions and resumes, identifying latent skills and cultural
                     alignment that traditional keyword searches miss.
                   </p>
                 </div>
-                <div className="mt-12 flex items-center gap-4">
-                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-semibold uppercase tracking-wider text-[#45474b]">
+                <div className="mt-12 flex items-center gap-3">
+                  <span className="px-3 py-1 bg-neutral-100 rounded-full text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                     Context Aware
                   </span>
-                  <span className="px-3 py-1 bg-[#edeeef] rounded-full text-[0.7rem] font-semibold uppercase tracking-wider text-[#45474b]">
+                  <span className="px-3 py-1 bg-neutral-100 rounded-full text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                     Vector Embeddings
                   </span>
                 </div>
               </motion.div>
 
-              {/* Transparent scoring, 1 col (replaces the fabricated accuracy stat) */}
+              {/* Step 02: transparent scoring, 1 col, the section's one accent card */}
               <motion.div
-                className="bg-[#0051d5] p-10 rounded-3xl flex flex-col justify-between text-white cursor-default shadow-premium-lg"
+                className="relative bg-[#0051d5] ring-1 ring-white/[0.06] edge-highlight p-10 rounded-3xl flex flex-col justify-between text-white cursor-default shadow-premium-lg overflow-hidden"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
                 whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center mb-8">
-                  <Gauge className="text-white w-5 h-5" strokeWidth={1.75} />
+                <div className="relative z-10 flex items-center gap-4 mb-8">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-white/60">
+                    Step 02
+                  </span>
+                  <span className="flex-1 h-px bg-white/20" />
+                  <Gauge className="w-[18px] h-[18px] text-white/70 shrink-0" strokeWidth={1.75} />
                 </div>
-                <div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-balance mb-3">Scoring you can read</h3>
-                  <p className="opacity-80 leading-relaxed">
+                <div className="relative z-10">
+                  <h3 className="font-serif font-medium text-2xl tracking-tight text-balance mb-3">
+                    Scoring you can read
+                  </h3>
+                  <p className="text-white/80 leading-relaxed">
                     Every role is scored on skills, trajectory, and culture fit, with the reasoning
                     behind each number shown so you can trust the ranking.
                   </p>
                 </div>
               </motion.div>
 
-              {/* Market Data, 1 col */}
+              {/* Step 03: market mapping, 1 col */}
               <motion.div
-                className="bg-white border border-neutral-200/70 p-10 rounded-3xl shadow-premium cursor-default"
+                className="bg-white ring-1 ring-neutral-200/70 p-10 rounded-3xl shadow-premium cursor-default"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
                 whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <div className="w-12 h-12 bg-[#e7e8e9] rounded-xl flex items-center justify-center mb-8">
-                  <BarChart3 className="text-black w-5 h-5" strokeWidth={1.75} />
+                <div className="flex items-center gap-4 mb-8">
+                  <span className={SPEC}>Step 03</span>
+                  <span className="flex-1 h-px bg-neutral-200" />
+                  <BarChart3 className="w-[18px] h-[18px] text-neutral-400 shrink-0" strokeWidth={1.75} />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight mb-4">Dynamic Market Mapping</h3>
-                <p className="text-[#45474b] leading-relaxed">
+                <h3 className="font-serif font-medium text-2xl tracking-tight text-balance mb-4 text-neutral-900">
+                  Dynamic Market Mapping
+                </h3>
+                <p className="text-neutral-500 leading-relaxed">
                   Real-time analysis of industry trends, compensation benchmarks, and hiring
                   velocity across global tech hubs.
                 </p>
               </motion.div>
 
-              {/* Privacy, 2 cols */}
+              {/* Trust band: privacy commitment, deliberately unnumbered since
+                  it sits outside the three-step matching flow above. */}
               <motion.div
-                className="md:col-span-2 bg-black text-white p-10 rounded-3xl flex items-center gap-8 cursor-default shadow-premium-lg"
+                className="md:col-span-2 relative bg-black text-white p-10 rounded-3xl flex items-center gap-8 cursor-default shadow-premium-lg ring-1 ring-white/[0.06] edge-highlight overflow-hidden"
                 initial={{ opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ duration: 0.55, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                 whileHover={reduceMotion ? undefined : { y: -6 }}
               >
-                <div className="hidden sm:flex shrink-0 w-12 h-12 bg-white/10 rounded-xl items-center justify-center">
+                <div className="grain absolute inset-0 pointer-events-none" />
+                <div className="relative z-10 hidden sm:flex shrink-0 w-12 h-12 bg-white/10 rounded-xl items-center justify-center">
                   <Lock className="text-white w-5 h-5" strokeWidth={1.75} />
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold tracking-tight mb-2">Sovereign Privacy</h3>
-                  <p className="opacity-80 leading-relaxed">
+                <div className="relative z-10">
+                  <span className={`${SPEC} block mb-2`}>A Note on Privacy</span>
+                  <h3 className="font-serif font-medium text-xl tracking-tight mb-2">
+                    Sovereign Privacy
+                  </h3>
+                  <p className="text-neutral-400 leading-relaxed">
                     Your data is yours. PathAI utilizes zero-retention LLM processing and
                     localized encryption to ensure your job search remains entirely confidential
                     and secure.
@@ -349,29 +411,57 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="max-w-[1440px] mx-auto px-6 md:px-12">
+        {/* ============================================================
+            CTA
+            ============================================================ */}
+        <section className="max-w-[1440px] mx-auto px-6 md:px-12 py-28 md:py-36">
           <motion.div
-            className="relative bg-black rounded-[4rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.2)]"
+            className="relative bg-black rounded-[2.5rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.2)] ring-1 ring-white/[0.06] edge-highlight"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
+            <div className="grain absolute inset-0 pointer-events-none" />
+            <span
+              aria-hidden
+              className="pointer-events-none select-none absolute -bottom-16 right-2 md:right-10 font-serif leading-none text-[10rem] md:text-[16rem] text-white/[0.04]"
+            >
+              PathAI
+            </span>
+
             <div className="relative z-10 max-w-3xl mx-auto text-center">
+              {/* Signal-thread terminus: the one blue thread motif lands here,
+                  right above the headline's blue word. */}
+              <div className="mb-10 flex justify-center">
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    aria-hidden
+                    className="h-16 w-px origin-top"
+                    style={{
+                      background: "linear-gradient(to bottom, rgba(102,144,255,0) 0%, #6690ff 100%)",
+                    }}
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: reduceMotion ? 0 : 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  />
+                  <span className="-mt-0.5 h-2 w-2 rounded-full bg-[#6690ff]" />
+                </div>
+              </div>
+
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.94 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/60 text-xs font-semibold uppercase tracking-widest mb-10"
+                className="inline-flex items-center px-4 py-1.5 rounded-full border border-white/10 bg-white/5 mb-10"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#6690ff] inline-block" />
-                The Intelligent Curator
+                <span className={SPEC}>The Intelligent Curator</span>
               </motion.div>
 
               <motion.h2
-                className="text-6xl md:text-8xl font-bold leading-[0.9] tracking-tight text-balance mb-10"
+                className="font-serif font-medium text-6xl md:text-8xl leading-[0.95] tracking-tight text-balance mb-10"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -429,29 +519,34 @@ export default function AboutPage() {
             </div>
           </motion.div>
         </section>
-
       </main>
 
-      {/* Footer */}
-      <footer className="bg-zinc-50">
-        <div className="flex flex-col md:flex-row justify-between items-center px-6 md:px-12 py-16 max-w-[1440px] mx-auto gap-8">
+      {/* ================================================================
+          FOOTER
+          ================================================================ */}
+      <footer className="relative overflow-hidden border-t border-neutral-100 bg-white">
+        <span
+          aria-hidden
+          className="pointer-events-none select-none absolute -bottom-10 md:-bottom-16 left-1/2 -translate-x-1/2 font-serif leading-none text-[6rem] md:text-[11rem] text-neutral-900/[0.03]"
+        >
+          PathAI
+        </span>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-center px-6 md:px-12 py-16 max-w-[1440px] mx-auto gap-8">
           <div className="flex flex-col items-center md:items-start gap-4">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-black">
                 <PathMark className="w-[18px] h-[18px] text-white" />
               </span>
-              <span className="text-lg font-bold tracking-tight text-zinc-950">PathAI</span>
+              <span className="text-lg font-bold tracking-tight text-neutral-950">PathAI</span>
             </Link>
-            <div className="text-xs uppercase tracking-[0.1em] font-semibold text-zinc-400">
-              © 2026 PathAI. The Intelligent Curator.
-            </div>
+            <div className={SPEC}>© 2026 PathAI. The Intelligent Curator.</div>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
             {["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact"].map((label) => (
               <a
                 key={label}
                 href="#"
-                className="text-xs uppercase tracking-[0.1em] font-semibold text-zinc-400 hover:text-zinc-950 transition-all opacity-70 hover:opacity-100 duration-300"
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400 hover:text-black transition-colors"
               >
                 {label}
               </a>

@@ -7,6 +7,9 @@ import { Job } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/* Shared editorial spec-label: Geist Mono, tracked, tabular. */
+const SPEC = "font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 dark:text-neutral-500";
+
 interface InterviewQuestion {
   category: string;
   question: string;
@@ -64,11 +67,11 @@ function QuestionCard({ q, index }: { q: InterviewQuestion; index: number }) {
           >
             <div className="px-4 py-4 bg-neutral-50 dark:bg-neutral-800/40 space-y-3">
               <div>
-                <p className="text-[10px] font-semibold text-neutral-900 dark:text-white uppercase tracking-widest mb-1">Why they ask</p>
+                <p className={`${SPEC} mb-1`}>Why they ask</p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">{q.why_asked}</p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-[#0051d5] dark:text-[#6690ff] uppercase tracking-widest mb-1">Your tip</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-[#0051d5] dark:text-[#6690ff] mb-1">Your tip</p>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">{q.tip}</p>
               </div>
             </div>
@@ -141,14 +144,12 @@ export default function InterviewCoach({ job, resumeSummary = "", onClose }: Pro
         animate={reduceMotion ? { opacity: 1 } : { x: 0 }}
         exit={reduceMotion ? { opacity: 0 } : { x: "100%" }}
         transition={{ type: "spring", stiffness: 320, damping: 32 }}
-        className="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-neutral-900 border-l border-neutral-200/70 dark:border-neutral-800 shadow-premium-lg z-50 flex flex-col"
+        className="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-neutral-900 border-l border-neutral-200/70 dark:border-neutral-800 ring-1 ring-neutral-200/70 dark:ring-white/[0.06] shadow-premium-lg z-50 flex flex-col"
       >
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-neutral-100 dark:border-neutral-800">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 mb-1">
-              AI Interview Coach
-            </p>
+            <p className={`${SPEC} mb-1.5`}>AI Interview Coach</p>
             <h2 className="font-semibold text-neutral-900 dark:text-white text-lg leading-tight tracking-tight line-clamp-1">{job.title}</h2>
           </div>
           <button
@@ -163,7 +164,7 @@ export default function InterviewCoach({ job, resumeSummary = "", onClose }: Pro
         <div className="flex-1 overflow-y-auto">
           {!generated ? (
             <div className="flex flex-col items-center justify-center h-full px-8 py-16 text-center">
-              <div className="w-16 h-16 bg-[#0051d5] rounded-2xl flex items-center justify-center mx-auto mb-6 glow-accent">
+              <div className="w-16 h-16 bg-neutral-900 dark:bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 ring-1 ring-white/[0.06] edge-highlight">
                 <Lightbulb className="w-8 h-8 text-white" strokeWidth={1.75} />
               </div>
               <h3 className="font-semibold text-neutral-900 dark:text-white text-xl mb-3 tracking-tight">Interview Prep</h3>
@@ -177,12 +178,13 @@ export default function InterviewCoach({ job, resumeSummary = "", onClose }: Pro
                 </p>
               )}
 
+              {/* Primary action: the panel's single blue moment. */}
               <motion.button
                 onClick={generate}
                 disabled={loading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full max-w-xs py-4 bg-black text-white dark:bg-white dark:text-black text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full max-w-xs py-4 bg-[#0051d5] text-white text-sm font-semibold rounded-xl shadow-premium hover:bg-[#0040a8] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -203,7 +205,7 @@ export default function InterviewCoach({ job, resumeSummary = "", onClose }: Pro
                       const Icon = CATEGORY_ICONS[category] ?? Lightbulb;
                       return <Icon className={`w-4 h-4 ${CATEGORY_STYLE.icon}`} strokeWidth={1.75} />;
                     })()}
-                    <h3 className="text-[10px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                    <h3 className={SPEC}>
                       {category}
                     </h3>
                     <span className="text-[10px] font-semibold font-mono tabular-nums text-neutral-300 dark:text-neutral-600">
