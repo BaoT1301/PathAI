@@ -7,7 +7,7 @@ import {
   useSpring,
   useTransform,
   useReducedMotion,
-  AnimatePresence,
+  LayoutGroup,
   type Variants,
 } from "framer-motion";
 import {
@@ -189,324 +189,519 @@ const STATIC_JOBS = [
 
 /* ============================================================
    Process Step Visuals
+
+   Shared editorial vocabulary across all three cards:
+   - mono "spec-label" headers (Geist Mono, tracking, tabular-nums)
+   - one-accent discipline: #0051d5 (#6690ff on dark) marks ONLY the
+     decisive moment per card (lifted signals / the #1 match / the
+     Interview node). Everything else stays neutral.
+   - each dark card: unified radius + .edge-highlight + .grain + hairline ring
+   - one signature motion per card, all reduced-motion safe (final state)
    ============================================================ */
 
-/** Step 01 â€” resume scanner with real text + keyword extraction */
+const SPEC =
+  "font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500";
+
+/* Resume signals: real tokens from Alex Chen's resume, with a match weight.
+   Blue lands only on the weight value in the ledger. */
+const SIGNALS = [
+  { name: "Python",         score: "0.98" },
+  { name: "PyTorch",        score: "0.95" },
+  { name: "TensorFlow",     score: "0.94" },
+  { name: "Kubernetes",     score: "0.89" },
+  { name: "System Design",  score: "0.91" },
+  { name: "Distributed ML", score: "0.93" },
+];
+
+/* Match rows in unranked source order (Stripe is NOT first) so the
+   ranking visibly resolves on enter. */
+const MATCHES = [
+  { id: "openai",    role: "AI Research Lead",   co: "OpenAI",    score: 94 },
+  { id: "stripe",    role: "Principal Engineer", co: "Stripe",    score: 98 },
+  { id: "anthropic", role: "ML Architect",       co: "Anthropic", score: 91 },
+];
+
+/* Pipeline events for the scroll-scrubbed trace. */
+const EVENTS = [
+  { code: "EVT·01", title: "Profile verified",               meta: "98th percentile fit detected",       time: "0:00" },
+  { code: "EVT·02", title: "Forwarded to Stripe Recruiting", meta: "Sent to Sarah Chen · Sr. Recruiter", time: "0:03" },
+  { code: "EVT·03", title: "Recruiter opened profile",       meta: "3 min 24 sec dwell time",            time: "0:15" },
+  { code: "EVT·04", title: "Interview request sent",         meta: "Thu · 2:00 PM Pacific",              time: "now"  },
+];
+
+/** Step 01: parse ledger + shared-layout token lift.
+ *  A blue caret steps DOWN the resume line by line, drawing a baseline under
+ *  the current row. When parsing completes, the skill tokens fly (shared-layout
+ *  FLIP) out of the resume and settle into a dotted-leader ledger. */
 function ResumeScanner() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduceMotion = useReducedMotion();
-  const [extracted, setExtracted] = useState(false);
+  const [line, setLine] = useState(0);
+  const [parsed, setParsed] = useState(false);
+
+  const ROWS = 4; // identity · role · summary · skills
 
   useEffect(() => {
     if (!inView) return;
-    const t = setTimeout(() => setExtracted(true), 1500);
-    return () => clearTimeout(t);
-  }, [inView]);
+    if (reduceMotion) {
+      setLine(ROWS);
+      setParsed(true);
+      return;
+    }
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      if (i >= ROWS) {
+        clearInterval(id);
+        setLine(ROWS);
+        setParsed(true);
+      } else {
+        setLine(i);
+      }
+    }, 440);
+    return () => clearInterval(id);
+  }, [inView, reduceMotion]);
 
-  const chips = ["Python", "ML / AI", "5 yrs exp", "Leadership", "System Design", "React"];
-  const keywords = ["Python", "TensorFlow", "PyTorch", "Kubernetes", "Go", "System Design"];
+  const done = parsed;
+  const rowState = (i: number): "todo" | "active" | "done" =>
+    done || line > i ? "done" : line === i ? "active" : "todo";
 
   return (
-    <div ref={ref} className="font-sans bg-neutral-900/50 rounded-[3rem] border border-neutral-800 p-8 overflow-hidden relative h-full flex flex-col gap-6">
-      {/* Resume document */}
-      <div className="relative flex-1 rounded-2xl border border-white/[0.06] bg-neutral-800/40 overflow-hidden">
-        {/* Soft extraction sweep â€” a low-opacity band, never a neon laser */}
-        <motion.div
-          className="absolute inset-x-0 h-20 pointer-events-none z-10"
-          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,81,213,0.10), transparent)" }}
-          initial={{ top: "-25%" }}
-          animate={inView && !reduceMotion ? { top: ["-25%", "110%"] } : {}}
-          transition={{ duration: 2.1, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.6 }}
-        />
+    <div
+      ref={ref}
+      className="relative font-sans h-full rounded-[1.75rem] border border-neutral-800 bg-neutral-900/60 edge-highlight ring-1 ring-white/[0.06] p-7 overflow-hidden flex flex-col gap-6"
+    >
+      <div className="grain absolute inset-0 pointer-events-none" />
 
-        {/* Document window chrome */}
-        <div className="flex items-center gap-1.5 px-5 pt-4 pb-3">
-          <span className="w-2 h-2 rounded-full bg-white/10" />
-          <span className="w-2 h-2 rounded-full bg-white/10" />
-          <span className="w-2 h-2 rounded-full bg-white/10" />
-          <span className="ml-2 text-[10px] font-mono tracking-tight text-neutral-500">alex-chen-resume.pdf</span>
+      <div className="relative z-10 flex h-full flex-col gap-6">
+        {/* spec-label header */}
+        <div className="flex items-center justify-between">
+          <span className={SPEC}>RESUME · PARSE · 6 SIGNALS</span>
+          <span className={SPEC}>{done ? "COMPLETE" : "READING"}</span>
         </div>
-        <div className="h-px bg-white/[0.06]" />
 
-        <div className="p-5">
-          {/* Identity */}
-          <motion.div className="flex items-center gap-3"
-            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.1 }}>
-            <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-neutral-400 shrink-0">
-              <User size={16} strokeWidth={1.75} />
+        <LayoutGroup>
+          {/* Resume, read as a ledger: no window chrome, no scan sweep */}
+          <div className="relative flex-1 rounded-2xl border border-white/[0.06] bg-neutral-950/40 overflow-hidden">
+            <div className="py-1">
+              {[0, 1, 2, 3].map((i) => {
+                const st = rowState(i);
+                return (
+                  <div key={i} className="relative flex">
+                    {/* gutter: row number + stepping caret on a hairline rule */}
+                    <div className="relative w-9 shrink-0 border-r border-white/[0.06] flex justify-end pr-2.5 pt-3">
+                      <span
+                        className={`font-mono text-[9px] tabular-nums leading-none transition-colors duration-300 ${
+                          st === "active" ? "text-[#6690ff]" : "text-neutral-600"
+                        }`}
+                      >
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span
+                        className="absolute right-[-1px] top-2.5 h-4 w-px rounded-full transition-colors duration-300"
+                        style={{
+                          backgroundColor:
+                            st === "active"
+                              ? "#0051d5"
+                              : st === "done"
+                              ? "rgba(255,255,255,0.12)"
+                              : "transparent",
+                        }}
+                      />
+                    </div>
+
+                    {/* row content */}
+                    <div className="flex-1 min-w-0 pl-4 pr-4 py-2.5">
+                      {i === 0 && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-neutral-400 shrink-0">
+                            <User size={16} strokeWidth={1.75} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-white text-[13px] font-semibold tracking-tight leading-tight">Alex Chen</div>
+                            <div className="text-neutral-500 text-[10px] font-mono tracking-tight">San Francisco, CA · alex@gmail.com</div>
+                          </div>
+                        </div>
+                      )}
+                      {i === 1 && (
+                        <>
+                          <div className="text-[12px] font-semibold text-white/90 tracking-tight leading-tight">Senior Machine Learning Engineer</div>
+                          <div className="text-[10px] text-neutral-500 font-mono tracking-tight mt-1">Google DeepMind · 2019 to 2024</div>
+                        </>
+                      )}
+                      {i === 2 && (
+                        <p className="text-[10px] text-neutral-400 leading-[1.75]">
+                          Led production ML pipelines serving 2B+ requests/day. Architected
+                          distributed training on TPU v4 pods for large-scale language models
+                          and contributed to internal AutoML frameworks used across Google.
+                        </p>
+                      )}
+                      {i === 3 && (
+                        <>
+                          <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-neutral-500 mb-2">Core Skills</div>
+                          <div className="flex flex-wrap items-center gap-x-1 gap-y-1 min-h-[18px]">
+                            {!done ? (
+                              SIGNALS.map((s, k) => (
+                                <span key={s.name} className="inline-flex items-center text-[10px] font-medium tracking-tight leading-none">
+                                  <motion.span
+                                    layoutId={`sig-${s.name}`}
+                                    className="rounded px-1 py-0.5 text-neutral-300"
+                                    transition={{ layout: { duration: reduceMotion ? 0 : 0.55, ease: [0.25, 0.46, 0.45, 0.94] } }}
+                                  >
+                                    {s.name}
+                                  </motion.span>
+                                  {k < SIGNALS.length - 1 && <span className="text-neutral-700 px-0.5">·</span>}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="font-mono text-[9px] tracking-[0.14em] text-neutral-600">6 SIGNALS LIFTED →</span>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {/* baseline the caret draws under the current row */}
+                      <motion.div
+                        className="mt-2 h-px origin-left"
+                        style={{ backgroundColor: st === "active" ? "#0051d5" : "rgba(255,255,255,0.06)" }}
+                        initial={false}
+                        animate={{ scaleX: st === "todo" ? 0 : 1 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="min-w-0">
-              <div className="text-white text-[13px] font-semibold tracking-tight leading-tight">Alex Chen</div>
-              <div className="text-neutral-500 text-[10px] font-mono tracking-tight">San Francisco, CA · alex@gmail.com</div>
+          </div>
+
+          {/* Extracted signals: dotted-leader ledger; blue only on the value */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="w-1.5 h-1.5 rounded-full transition-colors duration-500"
+                style={{ backgroundColor: done ? "#0051d5" : "#3f3f46" }}
+              />
+              <p className={SPEC}>Extracted Signals</p>
             </div>
-          </motion.div>
-
-          <div className="h-px bg-white/[0.06] my-4" />
-
-          {/* Role */}
-          <motion.div
-            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.22 }}>
-            <div className="text-[12px] font-semibold text-white/90 tracking-tight leading-tight">
-              Senior Machine Learning Engineer
-            </div>
-            <div className="text-[10px] text-neutral-500 font-mono tracking-tight mt-1">
-              Google DeepMind · 2019 to 2024
-            </div>
-          </motion.div>
-
-          <motion.p className="text-[10px] text-neutral-400 leading-[1.75] mt-3"
-            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.34 }}>
-            Led production ML pipelines serving 2B+ requests/day. Architected distributed
-            training on TPU v4 pods for large-scale language models and contributed to
-            internal AutoML frameworks used across Google.
-          </motion.p>
-
-          <div className="h-px bg-white/[0.06] my-4" />
-
-          {/* Skills row â€” the extraction target; keywords tint to accent when parsed */}
-          <motion.div
-            initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.46 }}>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.18em] text-neutral-500 mb-2">
-              Core Skills
-            </div>
-            <div className="flex flex-wrap items-center gap-y-1">
-              {keywords.map((kw, i) => (
-                <span key={kw} className="inline-flex items-center text-[10px] font-medium tracking-tight leading-none">
+            <div className="flex flex-col gap-1.5">
+              {SIGNALS.map((s) => (
+                <div key={s.name} className="flex items-baseline gap-2">
+                  {done && (
+                    <motion.span
+                      layoutId={`sig-${s.name}`}
+                      className="text-[11px] font-medium tracking-tight text-white/90 shrink-0"
+                      transition={{ layout: { duration: reduceMotion ? 0 : 0.55, ease: [0.25, 0.46, 0.45, 0.94] } }}
+                    >
+                      {s.name}
+                    </motion.span>
+                  )}
+                  <span className="flex-1 translate-y-[-3px] border-b border-dotted border-white/15" />
                   <motion.span
-                    className="rounded px-1 py-0.5 transition-colors duration-500"
-                    style={{
-                      color: extracted ? "#6690ff" : "#71717a",
-                      backgroundColor: extracted ? "rgba(0,81,213,0.10)" : "transparent",
-                    }}
-                    animate={extracted && !reduceMotion ? { opacity: [0.45, 1] } : {}}
-                    transition={{ delay: i * 0.08, duration: 0.45 }}>
-                    {kw}
+                    className="font-mono text-[11px] tabular-nums text-[#6690ff] shrink-0"
+                    initial={false}
+                    animate={{ opacity: done ? 1 : 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.4, delay: reduceMotion ? 0 : 0.15 }}
+                  >
+                    {s.score}
                   </motion.span>
-                  {i < keywords.length - 1 && <span className="text-neutral-700 px-1">·</span>}
-                </span>
+                </div>
               ))}
             </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Extracted signals */}
-      <div>
-        <motion.div className="flex items-center gap-2 mb-3"
-          initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.7 }}>
-          <motion.span
-            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
-            animate={reduceMotion ? {} : { opacity: [1, 0.4, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-          />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-            Extracted Signals
-          </p>
-        </motion.div>
-        <div className="flex flex-wrap gap-1.5">
-          {chips.map((skill, i) => (
-            <motion.span
-              key={skill}
-              className="px-2.5 py-1 rounded-full text-[11px] font-medium tracking-tight bg-[#0051d5]/10 border border-[#0051d5]/20 text-[#6690ff]"
-              initial={{ opacity: 0, y: 6 }}
-              animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 1.5 + i * 0.08, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}>
-              {skill}
-            </motion.span>
-          ))}
-        </div>
+            <p className="mt-4 font-serif italic text-[13px] leading-snug text-neutral-500">
+              &ldquo;It read the trajectory, not just the keywords.&rdquo;
+            </p>
+          </div>
+        </LayoutGroup>
       </div>
     </div>
   );
 }
 
-/** Step 02 â€” match results panel, modern startup style */
+/** Step 02: ranking resolves + tick / EQ meter.
+ *  Rows enter in source order then re-sort (shared-layout) so #1 rises to the
+ *  top; the tick meter fills left-to-right on resolve. Blue marks only #1. */
 function MatchVisual() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduceMotion = useReducedMotion();
+  const [ranked, setRanked] = useState(false);
 
-  const matches = [
-    { role: "Principal Engineer", co: "Stripe",    score: 98, tag: "Top Pick"   },
-    { role: "AI Research Lead",   co: "OpenAI",    score: 94, tag: "Strong Fit" },
-    { role: "ML Architect",       co: "Anthropic", score: 91, tag: "High Match" },
-  ];
+  useEffect(() => {
+    if (!inView || reduceMotion) return;
+    const t = setTimeout(() => setRanked(true), 650);
+    return () => clearTimeout(t);
+  }, [inView, reduceMotion]);
+
+  const resolved = ranked || reduceMotion;
+  const topScore = Math.max(...MATCHES.map((m) => m.score));
+  const ordered = resolved ? [...MATCHES].sort((a, b) => b.score - a.score) : MATCHES;
+  const TICKS = 24;
 
   return (
-    <div ref={ref} className="font-sans bg-neutral-900/60 rounded-[3rem] border border-neutral-800 overflow-hidden h-full flex flex-col">
-      {/* Header bar â€” one subtle live dot */}
-      <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <motion.span
-            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
-            animate={reduceMotion ? {} : { opacity: [1, 0.35, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-          />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-300">AI Matching</span>
+    <div
+      ref={ref}
+      className="relative font-sans h-full rounded-[1.75rem] border border-neutral-800 bg-neutral-900/60 edge-highlight ring-1 ring-white/[0.06] overflow-hidden flex flex-col"
+    >
+      <div className="grain absolute inset-0 pointer-events-none" />
+
+      <div className="relative z-10 flex h-full flex-col">
+        {/* spec-label header */}
+        <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <span className={SPEC}>MATCH ENGINE · ~50K ROLES</span>
+          <span className={SPEC}>RANKED 0.4s</span>
         </div>
-        <span className="text-[10px] font-mono tabular-nums text-neutral-500 tracking-tight">~50k roles</span>
+
+        <div className="p-4 flex flex-1 flex-col justify-center gap-2.5">
+          {ordered.map((m) => {
+            const isTop = resolved && m.score === topScore;
+            const lit = Math.round((m.score / 100) * TICKS);
+            const delta = m.score - topScore;
+            return (
+              <motion.div
+                key={m.id}
+                layout="position"
+                transition={{ layout: { duration: reduceMotion ? 0 : 0.6, ease: [0.25, 0.46, 0.45, 0.94] } }}
+                className={`group relative flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-xl border transition-colors ${
+                  isTop ? "border-[#0051d5]/30 bg-[#0051d5]/[0.06]" : "border-white/[0.06] bg-white/[0.02]"
+                }`}
+              >
+                {isTop && <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-[#0051d5]" />}
+
+                <CompanyLogo company={m.co} className="w-11 h-11 rounded-xl" />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-white text-[13px] font-semibold tracking-tight truncate leading-none">{m.role}</span>
+                    {isTop && (
+                      <span className="shrink-0 inline-flex items-center rounded-md bg-[#0051d5]/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold tabular-nums text-[#6690ff] leading-none">
+                        #1
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-neutral-400 tracking-tight leading-none mb-2.5">{m.co}</div>
+
+                  {/* tick / EQ meter: N lit ticks proportional to score, blue only on #1 */}
+                  <div className="flex items-end gap-[2px] h-3">
+                    {Array.from({ length: TICKS }).map((_, t) => {
+                      const on = resolved && t < lit;
+                      return (
+                        <motion.span
+                          key={t}
+                          className="w-[3px] rounded-sm"
+                          style={{
+                            backgroundColor: on
+                              ? isTop
+                                ? "#0051d5"
+                                : "rgba(255,255,255,0.32)"
+                              : "rgba(255,255,255,0.08)",
+                          }}
+                          initial={false}
+                          animate={{ height: on ? "100%" : "45%" }}
+                          transition={{ duration: reduceMotion ? 0 : 0.35, delay: reduceMotion ? 0 : resolved ? t * 0.012 : 0 }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="shrink-0 w-16 text-right">
+                  <div className="text-[22px] font-semibold font-mono tabular-nums tracking-tight text-white leading-none">
+                    <CountUp to={m.score} />
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] tabular-nums text-neutral-500 leading-none">
+                    {!resolved ? " " : isTop ? "top" : delta}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* footer: status reads once, no pulsing dot */}
+        <div className="px-6 py-4 border-t border-white/[0.06] flex items-center justify-between">
+          <span className="text-[10px] tracking-tight text-neutral-500">Ranked by the PathAI engine</span>
+          <span className={SPEC}>{resolved ? "RESOLVED" : "SORTING"}</span>
+        </div>
       </div>
-
-      <div className="p-4 flex flex-col gap-2 flex-1 justify-center">
-        {matches.map((m, i) => (
-          <motion.div
-            key={m.role}
-            className="group flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
-            initial={{ opacity: 0, x: -16 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ delay: 0.15 + i * 0.16, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
-
-            {/* Company logo tile */}
-            <CompanyLogo company={m.co} className="w-11 h-11 rounded-xl" />
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-white text-[13px] font-semibold tracking-tight truncate leading-none">{m.role}</span>
-                {i === 0 && (
-                  <span className="shrink-0 inline-flex items-center rounded-md bg-[#0051d5]/15 px-1.5 py-0.5 text-[9px] font-semibold font-mono tabular-nums text-[#6690ff] leading-none">
-                    #1
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="text-[11px] text-neutral-400 tracking-tight leading-none">{m.co}</span>
-                <span className="inline-flex items-center rounded-full bg-white/[0.05] px-2 py-0.5 text-[9px] font-medium uppercase tracking-[0.08em] text-neutral-400 leading-none">
-                  {m.tag}
-                </span>
-              </div>
-              {/* Thin accent progress bar */}
-              <div className="h-[2px] w-full bg-white/[0.06] rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-[#0051d5] rounded-full"
-                  initial={{ width: "0%" }}
-                  animate={inView ? { width: `${m.score}%` } : {}}
-                  transition={{ delay: 0.5 + i * 0.16, duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] }}
-                />
-              </div>
-            </div>
-
-            {/* Score */}
-            <div className="shrink-0 text-right pl-1 w-14">
-              <span className="text-[22px] font-semibold font-mono tabular-nums tracking-tight text-white leading-none">
-                <CountUp to={m.score} />
-              </span>
-              <span className="text-neutral-500 text-[11px] font-mono ml-0.5">%</span>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <motion.div className="px-6 py-4 border-t border-white/[0.06] flex items-center justify-between"
-        initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.95 }}>
-        <span className="text-[10px] text-neutral-500 tracking-tight">Ranked by PathAI engine</span>
-        <span className="text-[10px] font-mono tabular-nums text-neutral-600">updated live</span>
-      </motion.div>
     </div>
   );
 }
 
-/** Step 03 â€” activity feed / notification panel style */
+/** Step 03: scroll-scrubbed trace + interview ticket.
+ *  GSAP ScrollTrigger (over the active Lenis) draws the connector and lights
+ *  each node as you scroll; the final Interview node is the single blue moment,
+ *  threading into a tactile perforated ticket. Markup renders the final state,
+ *  so reduced-motion (GSAP skipped) shows the completed pipeline. */
 function InsertionVisual() {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduceMotion = useReducedMotion();
 
-  const events = [
-    { title: "Profile verified",                meta: "98th percentile fit detected",       time: "0:00", live: false },
-    { title: "Forwarded to Stripe Recruiting",  meta: "Sent to Sarah Chen · Sr. Recruiter", time: "0:03", live: false },
-    { title: "Recruiter opened profile",        meta: "3 min 24 sec dwell time",            time: "0:15", live: false },
-    { title: "Interview request sent",          meta: "Thu · 2:00 PM Pacific",              time: "now",  live: true  },
-  ];
+  const rootRef = useRef<HTMLDivElement>(null);
+  const connectorRef = useRef<HTMLDivElement>(null);
+  const threadRef = useRef<HTMLDivElement>(null);
+  const ticketRef = useRef<HTMLDivElement>(null);
+  const finalDotRef = useRef<HTMLDivElement | null>(null);
+  const dotRefs = useRef<HTMLDivElement[]>([]);
+  const statusProgRef = useRef<HTMLSpanElement>(null);
+  const statusDoneRef = useRef<HTMLSpanElement>(null);
+
+  const N = EVENTS.length;
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const el = rootRef.current;
+    if (!el) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: el, start: "top 80%", end: "bottom 55%", scrub: 0.6 },
+      });
+
+      tl.fromTo(connectorRef.current, { scaleY: 0 }, { scaleY: 1, ease: "none" }, 0);
+
+      dotRefs.current.forEach((d, i) => {
+        if (d) tl.fromTo(d, { scale: 0.5, opacity: 0.35 }, { scale: 1, opacity: 1, ease: "none" }, i * 0.8);
+      });
+
+      // final node becomes the single blue moment
+      tl.fromTo(
+        finalDotRef.current,
+        { backgroundColor: "#27272a", borderColor: "rgba(255,255,255,0.10)", color: "#a1a1aa" },
+        { backgroundColor: "#0051d5", borderColor: "#0051d5", color: "#ffffff", ease: "none" },
+        (N - 1) * 0.8
+      );
+
+      // blue thread + ticket resolve
+      tl.fromTo(threadRef.current, { scaleY: 0 }, { scaleY: 1, ease: "none" }, "<+0.15");
+      tl.fromTo(ticketRef.current, { opacity: 0, y: 12 }, { opacity: 1, y: 0, ease: "none" }, "<+0.1");
+
+      // status reads once: IN PROGRESS → SCHEDULED
+      tl.fromTo(statusProgRef.current, { autoAlpha: 1 }, { autoAlpha: 0, ease: "none" }, "<");
+      tl.fromTo(statusDoneRef.current, { autoAlpha: 0 }, { autoAlpha: 1, ease: "none" }, "<");
+    }, rootRef);
+
+    return () => ctx.revert();
+  }, [reduceMotion, N]);
 
   return (
-    <div ref={ref} className="font-sans bg-neutral-900/60 rounded-[2.5rem] border border-neutral-800 overflow-hidden">
-      {/* Title bar */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <CompanyLogo company="Stripe" className="w-7 h-7 rounded-lg" />
-          <div className="min-w-0 leading-none">
-            <div className="text-[12px] font-semibold text-white tracking-tight leading-none">Stripe</div>
-            <div className="text-[10px] text-neutral-500 font-mono tracking-tight mt-1">Application timeline</div>
+    <div
+      ref={rootRef}
+      className="relative font-sans rounded-[1.75rem] border border-neutral-800 bg-neutral-900/60 edge-highlight ring-1 ring-white/[0.06] overflow-hidden"
+    >
+      <div className="grain absolute inset-0 pointer-events-none" />
+
+      <div className="relative z-10">
+        {/* header + status */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <CompanyLogo company="Stripe" className="w-7 h-7 rounded-lg" />
+            <div className="min-w-0 leading-none">
+              <div className="text-[12px] font-semibold text-white tracking-tight leading-none">Stripe</div>
+              <div className="mt-1 text-[10px] text-neutral-500 font-mono tracking-tight">Application timeline</div>
+            </div>
+          </div>
+          {/* Two stacked status labels. CSS default shows the FINAL state
+              (Scheduled) so reduced-motion / no-JS renders the completed
+              pipeline; GSAP reveals "In Progress" first, then crossfades. */}
+          <div className="relative h-3 w-24 shrink-0">
+            <span ref={statusProgRef} className="absolute right-0 top-0 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400 opacity-0">
+              In Progress
+            </span>
+            <span ref={statusDoneRef} className="absolute right-0 top-0 font-mono text-[10px] uppercase tracking-[0.18em] text-[#6690ff]">
+              Scheduled
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 rounded-full bg-[#0051d5]/10 border border-[#0051d5]/20 px-2 py-1">
-          <motion.span
-            className="w-1.5 h-1.5 rounded-full bg-[#0051d5]"
-            animate={reduceMotion ? {} : { opacity: [1, 0.35, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity }}
-          />
-          <span className="text-[9px] font-semibold text-[#6690ff] uppercase tracking-[0.14em]">Live</span>
+
+        {/* spec-label */}
+        <div className="px-5 pt-4">
+          <span className={SPEC}>PIPELINE · STRIPE · 4 EVENTS</span>
         </div>
-      </div>
 
-      {/* Connected activity timeline */}
-      <div className="p-5">
-        <div className="relative">
-          {/* Vertical connector, draws in behind the nodes */}
-          <motion.div
-            className="absolute left-[25px] top-4 bottom-4 w-px bg-white/[0.08] origin-top"
-            initial={{ scaleY: 0 }}
-            animate={inView ? { scaleY: 1 } : {}}
-            transition={{ duration: 1.1, ease: "easeInOut" }}
-          />
+        {/* scroll-scrubbed event trace */}
+        <div className="px-5 pt-4 pb-5">
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: "56px 28px 1fr", columnGap: 12, rowGap: 4 }}
+          >
+            {/* connector runs down the dot column */}
+            <div
+              ref={connectorRef}
+              className="w-px justify-self-center bg-white/[0.10] origin-top"
+              style={{ gridColumn: 2, gridRow: `1 / ${N + 1}` }}
+            />
 
-          <div className="space-y-1">
-            {events.map((ev, i) => (
-              <motion.div
-                key={ev.title}
-                className={`relative flex items-start gap-3.5 rounded-xl px-3 py-3 ${
-                  ev.live ? "bg-[#0051d5]/[0.08] glow-accent" : ""
-                }`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: 0.25 + i * 0.22, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}>
-
-                {/* Node */}
-                <div className={`relative z-10 w-[27px] h-[27px] rounded-full flex items-center justify-center shrink-0 ${
-                  ev.live
-                    ? "bg-[#0051d5] text-white"
-                    : "bg-neutral-800 border border-white/10 text-neutral-300"
-                }`}>
-                  {ev.live ? (
-                    <Send size={12} strokeWidth={1.75} />
-                  ) : (
-                    <Check size={12} strokeWidth={1.75} />
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0 pt-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[12px] font-semibold tracking-tight ${ev.live ? "text-white" : "text-white/90"}`}>
-                      {ev.title}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 font-mono tabular-nums shrink-0">{ev.time}</span>
+            {EVENTS.map((ev, i) => {
+              const isFinal = i === N - 1;
+              return (
+                <div key={ev.code} style={{ display: "contents" }}>
+                  {/* ledger */}
+                  <div className="text-right pt-1.5" style={{ gridColumn: 1, gridRow: i + 1 }}>
+                    <div className="font-mono text-[9px] tracking-[0.12em] tabular-nums text-neutral-500 leading-none">{ev.code}</div>
+                    <div className="mt-1 font-mono text-[9px] tabular-nums text-neutral-600 leading-none">{ev.time}</div>
                   </div>
-                  <span className="block text-[10px] text-neutral-500 tracking-tight mt-1">{ev.meta}</span>
+
+                  {/* node */}
+                  <div className="justify-self-center pt-0.5" style={{ gridColumn: 2, gridRow: i + 1 }}>
+                    <div
+                      ref={(n) => {
+                        if (n) {
+                          dotRefs.current[i] = n;
+                          if (isFinal) finalDotRef.current = n;
+                        }
+                      }}
+                      className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full ${
+                        isFinal ? "bg-[#0051d5] text-white" : "bg-neutral-800 border border-white/10 text-neutral-300"
+                      }`}
+                    >
+                      {isFinal ? <Send size={12} strokeWidth={1.75} /> : <Check size={12} strokeWidth={1.75} />}
+                    </div>
+                  </div>
+
+                  {/* content */}
+                  <div className="min-w-0 pb-3" style={{ gridColumn: 3, gridRow: i + 1 }}>
+                    <div className={`text-[12px] font-semibold tracking-tight ${isFinal ? "text-white" : "text-white/90"}`}>{ev.title}</div>
+                    <div className="mt-1 text-[10px] text-neutral-500 tracking-tight">{ev.meta}</div>
+                  </div>
                 </div>
-              </motion.div>
-            ))}
+              );
+            })}
+
+            {/* blue thread from the Interview node down into the ticket */}
+            <div
+              ref={threadRef}
+              className="w-px justify-self-center bg-[#0051d5] origin-top"
+              style={{ gridColumn: 2, gridRow: N + 1, height: 22 }}
+            />
+          </div>
+
+          {/* interview ticket: perforation seam + punched notches */}
+          <div
+            ref={ticketRef}
+            className="relative mt-1 flex overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
+          >
+            {/* left stub: the date, the blue interview moment */}
+            <div className="flex w-[84px] shrink-0 flex-col items-center justify-center bg-[#0051d5]/[0.08] py-4">
+              <span className="font-mono text-[10px] tracking-[0.2em] text-[#6690ff]">THU</span>
+              <span className="mt-0.5 font-serif text-2xl leading-none text-white">14</span>
+            </div>
+
+            {/* perforation seam + punch-hole notches */}
+            <div className="my-2 w-px border-l border-dashed border-white/25" />
+            <span className="absolute left-[84px] -top-1.5 h-3 w-3 -translate-x-1/2 rounded-full bg-neutral-950" />
+            <span className="absolute left-[84px] -bottom-1.5 h-3 w-3 -translate-x-1/2 rounded-full bg-neutral-950" />
+
+            {/* right: details */}
+            <div className="flex flex-1 items-center gap-3 px-4 py-3 min-w-0">
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-semibold tracking-tight text-white">Interview Scheduled</div>
+                <div className="mt-0.5 text-[10px] tracking-tight text-neutral-500">Thursday · 2:00 PM Pacific · Google Meet</div>
+              </div>
+              <BadgeCheck size={16} strokeWidth={1.75} className="shrink-0 text-[#6690ff]" />
+            </div>
           </div>
         </div>
-
-        {/* Calendar invite chip */}
-        <motion.div
-          className="mt-3 flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] p-3"
-          initial={{ opacity: 0, y: 8 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.25 + events.length * 0.22 + 0.15, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}>
-          <div className="w-10 h-10 rounded-xl bg-[#0051d5]/12 border border-[#0051d5]/25 flex items-center justify-center shrink-0">
-            <span className="text-[#6690ff] text-[10px] font-semibold tracking-wide leading-none">THU</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-white text-[12px] font-semibold tracking-tight">Interview Scheduled</div>
-            <div className="text-neutral-500 text-[10px] tracking-tight mt-0.5">Thursday · 2:00 PM Pacific · Google Meet</div>
-          </div>
-          <BadgeCheck size={16} strokeWidth={1.75} className="text-[#6690ff] shrink-0" />
-        </motion.div>
       </div>
     </div>
   );
@@ -576,6 +771,26 @@ export default function HomePage() {
               trigger,
               start: "top top",
               end: "bottom top",
+              scrub: true,
+            },
+          }
+        );
+      });
+
+      // Connective tissue: the single blue "signal thread" down the process
+      // section scrubs to full as you scroll, so the three visuals read as one
+      // instrument. Renders drawn (CSS default) when GSAP is skipped.
+      gsap.utils.toArray<HTMLElement>("[data-thread]").forEach((el) => {
+        gsap.fromTo(
+          el,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: el,
+              start: "top 85%",
+              end: "bottom 45%",
               scrub: true,
             },
           }
@@ -667,7 +882,7 @@ export default function HomePage() {
               >
                 We leverage proprietary LLMs to decode your career DNA and
                 match you with roles that don&apos;t just fit your
-                skills—they fit your trajectory.
+                skills; they fit your trajectory.
               </motion.p>
 
               <motion.div
@@ -825,96 +1040,91 @@ export default function HomePage() {
           ================================================================ */}
       <section className="py-40 px-8 bg-black text-white relative">
         <div className="max-w-[1440px] mx-auto">
-          {/* Section header */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-start mb-32">
+          {/* Section header: editorial serif */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-start mb-28">
             <ScrollReveal>
-              <h2 className="text-5xl md:text-7xl font-extrabold leading-[0.9] tracking-tight">
-                Beyond the
-                <br />
-                standard
-                <br />
-                application.
+              <span className={`${SPEC} mb-6 block`}>HOW IT WORKS · 03 STEPS</span>
+              <h2 className="font-serif font-medium text-5xl md:text-7xl leading-[0.95] tracking-tight text-balance">
+                Beyond the standard application.
               </h2>
             </ScrollReveal>
             <ScrollReveal delay={0.1}>
-              <p className="text-xl text-neutral-400 font-medium leading-relaxed max-w-lg lg:mt-12">
+              <p className="text-xl text-neutral-400 font-medium leading-relaxed max-w-lg lg:mt-14 text-balance">
                 We&apos;ve built a proprietary pipeline that removes the friction of
                 discovery and replaces it with the precision of AI.
               </p>
             </ScrollReveal>
           </div>
 
-          {/* Steps */}
+          {/* Steps: one thin blue signal thread ties the three visuals into
+              a single instrument (V1 signals → V2 #1 match → V3 timeline).
+              The thread is scroll-scrubbed via [data-thread] (page GSAP); under
+              reduced motion GSAP is skipped and it renders drawn. */}
           <div className="relative">
-            {/* Animated vertical line */}
-            <div className="absolute left-10 top-0 bottom-0 w-[2px] hidden md:block overflow-hidden opacity-30">
-              <motion.div
-                className="w-full h-full"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, #0051d5 0%, #404040 100%)",
-                  transformOrigin: "top",
-                }}
-                initial={{ scaleY: 0 }}
-                whileInView={{ scaleY: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.8, ease: "easeInOut" }}
-              />
-            </div>
+            <div
+              data-thread
+              className="absolute left-10 top-0 bottom-0 w-px hidden md:block origin-top"
+              style={{
+                background:
+                  "linear-gradient(to bottom, #0051d5 0%, rgba(0,81,213,0.55) 60%, rgba(0,81,213,0) 100%)",
+              }}
+            />
 
             <div className="space-y-32">
               {/* Step 01 */}
               <motion.div
-                className="relative pl-0 md:pl-32"
+                className="relative pl-0 md:pl-24"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="hidden md:flex absolute left-4 top-0 w-12 h-12 rounded-full bg-white text-black items-center justify-center font-black z-10 border-4 border-black text-sm">
-                  01
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <span className="hidden md:block absolute left-10 top-2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#0051d5] ring-4 ring-black" />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-5">
-                    <div className="w-20 h-20 rounded-3xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-8">
-                      <ScanLine size={36} strokeWidth={1.75} className="text-white" />
+                    <div className="flex items-center gap-4 mb-7">
+                      <span className={SPEC}>STEP 01</span>
+                      <span className="flex-1 h-px bg-white/10" />
+                      <ScanLine size={18} strokeWidth={1.75} className="text-neutral-400 shrink-0" />
                     </div>
-                    <h3 className="text-4xl font-black mb-6">
-                      Deep Contextual Scanning
+                    <h3 className="font-serif font-medium text-3xl md:text-4xl tracking-tight text-balance mb-5">
+                      Deep contextual scanning
                     </h3>
                     <p className="text-lg text-neutral-400 font-medium leading-relaxed">
-                      We don&apos;t just read keywords. Our LLMs analyze the
-                      narrative arc of your career, identifying latent strengths
+                      We don&apos;t just read keywords. Our models analyze the
+                      narrative arc of your career, surfacing latent strengths
                       that even you might have missed.
                     </p>
                   </div>
-                  <div className="lg:col-span-7">
-                    <ResumeScanner />
+                  <div className="lg:col-span-7 relative">
+                    <span aria-hidden className="pointer-events-none select-none hidden md:block absolute -top-14 -left-4 font-serif text-[10rem] leading-none text-white/[0.03]">01</span>
+                    <div className="relative"><ResumeScanner /></div>
                   </div>
                 </div>
               </motion.div>
 
               {/* Step 02 */}
               <motion.div
-                className="relative pl-0 md:pl-32"
+                className="relative pl-0 md:pl-24"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="hidden md:flex absolute left-4 top-0 w-12 h-12 rounded-full bg-white text-black items-center justify-center font-black z-10 border-4 border-black text-sm">
-                  02
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                  <div className="lg:col-span-5 order-2 lg:order-1">
-                    <MatchVisual />
+                <span className="hidden md:block absolute left-10 top-2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#0051d5] ring-4 ring-black" />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                  <div className="lg:col-span-7 order-2 lg:order-1 relative">
+                    <span aria-hidden className="pointer-events-none select-none hidden md:block absolute -top-14 -right-4 font-serif text-[10rem] leading-none text-white/[0.03]">02</span>
+                    <div className="relative"><MatchVisual /></div>
                   </div>
-                  <div className="lg:col-span-7 order-1 lg:order-2">
-                    <div className="w-20 h-20 rounded-3xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-8">
-                      <GitBranch size={36} strokeWidth={1.75} className="text-white" />
+                  <div className="lg:col-span-5 order-1 lg:order-2">
+                    <div className="flex items-center gap-4 mb-7">
+                      <span className={SPEC}>STEP 02</span>
+                      <span className="flex-1 h-px bg-white/10" />
+                      <GitBranch size={18} strokeWidth={1.75} className="text-neutral-400 shrink-0" />
                     </div>
-                    <h3 className="text-4xl font-black mb-6">
-                      Autonomous Pattern Matching
+                    <h3 className="font-serif font-medium text-3xl md:text-4xl tracking-tight text-balance mb-5">
+                      Autonomous pattern matching
                     </h3>
                     <p className="text-lg text-neutral-400 font-medium leading-relaxed">
                       Cross-referencing your profile with 50,000+ data points
@@ -927,22 +1137,22 @@ export default function HomePage() {
 
               {/* Step 03 */}
               <motion.div
-                className="relative pl-0 md:pl-32"
+                className="relative pl-0 md:pl-24"
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
                 transition={{ duration: 0.6 }}
               >
-                <div className="hidden md:flex absolute left-4 top-0 w-12 h-12 rounded-full bg-[#0051d5] text-white items-center justify-center font-black z-10 border-4 border-black text-sm">
-                  03
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <span className="hidden md:block absolute left-10 top-2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[#0051d5] ring-4 ring-black" />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                   <div className="lg:col-span-5">
-                    <div className="w-20 h-20 rounded-3xl bg-[#0051d5] flex items-center justify-center mb-8 shadow-[0_8px_24px_-8px_rgba(0,81,213,0.35)]">
-                      <Rocket size={36} strokeWidth={1.75} className="text-white" />
+                    <div className="flex items-center gap-4 mb-7">
+                      <span className={SPEC}>STEP 03</span>
+                      <span className="flex-1 h-px bg-white/10" />
+                      <Rocket size={18} strokeWidth={1.75} className="text-neutral-400 shrink-0" />
                     </div>
-                    <h3 className="text-4xl font-black mb-6">
-                      Verified Direct Insertion
+                    <h3 className="font-serif font-medium text-3xl md:text-4xl tracking-tight text-balance mb-5">
+                      Verified direct insertion
                     </h3>
                     <p className="text-lg text-neutral-400 font-medium leading-relaxed">
                       We bypass the &quot;black hole&quot; of traditional applications.
@@ -950,8 +1160,9 @@ export default function HomePage() {
                       decision-makers who matter most.
                     </p>
                   </div>
-                  <div className="lg:col-span-7">
-                    <InsertionVisual />
+                  <div className="lg:col-span-7 relative">
+                    <span aria-hidden className="pointer-events-none select-none hidden md:block absolute -top-14 -left-4 font-serif text-[10rem] leading-none text-white/[0.03]">03</span>
+                    <div className="relative"><InsertionVisual /></div>
                   </div>
                 </div>
               </motion.div>
