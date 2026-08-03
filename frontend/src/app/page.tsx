@@ -756,30 +756,10 @@ export default function HomePage() {
     if (reduceMotion) return;
 
     const ctx = gsap.context(() => {
-      // Hero: gentle scrub parallax on the floating decorative blobs.
-      gsap.utils.toArray<HTMLElement>("[data-parallax]").forEach((el) => {
-        const speed = parseFloat(el.dataset.parallax || "0");
-        const trigger =
-          el.closest<HTMLElement>("[data-hero-section]") || el;
-        gsap.fromTo(
-          el,
-          { yPercent: 0 },
-          {
-            yPercent: speed,
-            ease: "none",
-            scrollTrigger: {
-              trigger,
-              start: "top top",
-              end: "bottom top",
-              scrub: true,
-            },
-          }
-        );
-      });
-
-      // Connective tissue: the single blue "signal thread" down the process
-      // section scrubs to full as you scroll, so the three visuals read as one
-      // instrument. Renders drawn (CSS default) when GSAP is skipped.
+      // Connective tissue: the single blue "signal thread" now runs the whole
+      // page (hero drop, process spine, CTA terminus). Each [data-thread]
+      // scrubs to full as it scrolls through, so the blue reads as one spine
+      // down the page. Renders drawn (CSS default) when GSAP is skipped.
       gsap.utils.toArray<HTMLElement>("[data-thread]").forEach((el) => {
         gsap.fromTo(
           el,
@@ -832,6 +812,19 @@ export default function HomePage() {
       >
         <div className="absolute inset-0 grid-bg opacity-[0.12] -z-10 pointer-events-none" />
 
+        {/* Signal-thread seed: the blue spine starts here as a subtle drop and
+            recurs down the page, terminating in the final CTA. Scrubbed via
+            [data-thread]; renders drawn under reduced motion. */}
+        <div
+          aria-hidden
+          data-thread
+          className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-20 w-px origin-top"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(0,81,213,0) 0%, rgba(0,81,213,0.5) 100%)",
+          }}
+        />
+
         <div className="max-w-[1440px] mx-auto px-8 w-full">
           {/* Badge + headline */}
           <motion.div
@@ -844,8 +837,7 @@ export default function HomePage() {
               variants={fadeUp}
               className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-black text-white mb-8 shadow-lg"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0051d5]" />
-              <span className="text-[10px] font-black tracking-[0.2em] uppercase">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] tabular-nums text-white/90">
                 Intelligence Driven Hiring
               </span>
             </motion.div>
@@ -853,7 +845,7 @@ export default function HomePage() {
             <motion.h1
               variants={fadeUp}
               custom={1}
-              className="text-7xl md:text-[9rem] font-black leading-[0.85] tracking-tight hero-gradient-text"
+              className="font-sans text-7xl md:text-[9rem] font-black leading-[0.85] tracking-tight hero-gradient-text"
             >
               THE JOB SEARCH
             </motion.h1>
@@ -861,7 +853,7 @@ export default function HomePage() {
             <motion.span
               variants={fadeUp}
               custom={2}
-              className="font-thin italic text-neutral-300 text-4xl md:text-6xl mt-4 lowercase tracking-tight"
+              className="font-serif italic text-neutral-500 text-4xl md:text-6xl mt-4 lowercase tracking-tight"
             >
               Redefined.
             </motion.span>
@@ -893,7 +885,7 @@ export default function HomePage() {
                 <MagneticButton>
                   <Link href="/jobs">
                     <button className="bg-[#0051d5] text-white w-20 h-20 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-2xl shrink-0">
-                      <ArrowRight size={30} />
+                      <ArrowRight size={30} strokeWidth={1.75} />
                     </button>
                   </Link>
                 </MagneticButton>
@@ -939,14 +931,14 @@ export default function HomePage() {
                           transformPerspective: 1000,
                         }
                   }
-                  className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-neutral-200/80 shadow-[0_40px_80px_-20px_rgba(0,81,213,0.15)]"
+                  className="bg-white p-8 md:p-10 rounded-[2rem] ring-1 ring-neutral-200/70 shadow-premium-lg edge-highlight"
                 >
                   {/* Header: real logo + role + score chip */}
                   <div className="flex items-start justify-between gap-4 mb-8">
                     <div className="flex items-center gap-4 min-w-0">
                       <CompanyLogo company="Stripe" className="w-16 h-16 rounded-2xl" />
                       <div className="min-w-0">
-                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">
+                        <div className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 mb-1">
                           Top Match
                         </div>
                         <div className="text-2xl font-black tracking-tight leading-none">
@@ -958,25 +950,35 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="shrink-0 inline-flex items-center rounded-full bg-[#0051d5]/10 px-3 py-1.5">
-                      <span className="text-sm font-black tabular-nums text-[#0051d5]">96%</span>
+                      <span className="font-mono text-sm font-semibold tabular-nums text-[#0051d5]">96%</span>
                     </div>
                   </div>
 
-                  {/* Evidence rows with mini bars */}
+                  {/* Evidence rows with mini bars. Accent discipline: only the
+                      decisive signal (Skills, the 96% match) is blue; the other
+                      bars stay neutral. */}
                   <div className="space-y-4">
                     {[
-                      { label: "Skills", value: 96 },
-                      { label: "Trajectory", value: 92 },
-                      { label: "Culture", value: 88 },
+                      { label: "Skills", value: 96, decisive: true },
+                      { label: "Trajectory", value: 92, decisive: false },
+                      { label: "Culture", value: 88, decisive: false },
                     ].map((sig, i) => (
                       <div key={sig.label}>
                         <div className="flex justify-between text-xs font-bold mb-1.5">
                           <span className="text-neutral-500">{sig.label}</span>
-                          <span className="text-neutral-900 tabular-nums">{sig.value}%</span>
+                          <span
+                            className={`font-mono font-semibold tabular-nums ${
+                              sig.decisive ? "text-[#0051d5]" : "text-neutral-900"
+                            }`}
+                          >
+                            {sig.value}%
+                          </span>
                         </div>
                         <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
                           <motion.div
-                            className="h-full bg-[#0051d5] rounded-full"
+                            className={`h-full rounded-full ${
+                              sig.decisive ? "bg-[#0051d5]" : "bg-neutral-300"
+                            }`}
                             initial={{ width: "0%" }}
                             animate={{ width: `${sig.value}%` }}
                             transition={{
@@ -996,7 +998,7 @@ export default function HomePage() {
                   </p>
 
                   <div className="pt-6 mt-7 border-t border-neutral-100 flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400">
                       Analyzed by PathAI
                     </span>
                     <BadgeCheck size={18} strokeWidth={1.75} className="text-[#0051d5]" />
@@ -1012,6 +1014,9 @@ export default function HomePage() {
           SOCIAL PROOF â€” infinite scrolling logos
           ================================================================ */}
       <section data-reveal className="py-12 border-y border-neutral-100 overflow-hidden">
+        <p className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400 text-center mb-8">
+          Trusted by teams at
+        </p>
         <div className="relative">
           {/* Left + right fade masks */}
           <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
@@ -1027,7 +1032,7 @@ export default function HomePage() {
                 <img
                   src={company.logo}
                   alt={company.name}
-                  className="h-8 w-auto object-contain grayscale opacity-40 hover:opacity-70 hover:grayscale-0 transition-all duration-300"
+                  className="h-8 w-auto object-contain grayscale opacity-50 hover:opacity-70 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
             ))}
@@ -1180,7 +1185,7 @@ export default function HomePage() {
           <div className="flex flex-col lg:flex-row justify-between items-end mb-24 gap-12">
             <div className="max-w-2xl">
               <ScrollReveal>
-                <h2 className="text-6xl font-black tracking-tight mb-8">
+                <h2 className="font-serif font-medium text-6xl tracking-tight text-balance mb-8">
                   Selected Matches.
                 </h2>
               </ScrollReveal>
@@ -1194,7 +1199,7 @@ export default function HomePage() {
             <ScrollReveal delay={0.15}>
               <Link
                 href="/jobs"
-                className="text-sm font-black uppercase tracking-widest border-b-2 border-black pb-2 hover:opacity-50 transition-opacity whitespace-nowrap"
+                className="font-mono text-[11px] uppercase tracking-[0.18em] tabular-nums border-b border-neutral-900 pb-2 hover:opacity-50 transition-opacity whitespace-nowrap"
               >
                 View All Openings
               </Link>
@@ -1231,6 +1236,44 @@ export default function HomePage() {
                       {PLACEHOLDER_SCORES[0]}%
                     </span>
                     <span className="text-[11px] font-medium text-[#0051d5]/70 leading-none">match</span>
+                  </div>
+                </div>
+
+                {/* Match-evidence ledger: dotted-leader rows echo the process
+                    section's ledgers so the featured card carries the same
+                    density instead of a large empty gap. Values stay neutral
+                    mono (blue is reserved for the match chip and hover); the
+                    values resolve in sequence as the card enters, this
+                    section's signature motion. */}
+                <div className="relative">
+                  <div className={`${SPEC} mb-4`}>Match Evidence</div>
+                  <div className="flex flex-col gap-3">
+                    {[
+                      { k: "Skills alignment",  v: "96" },
+                      { k: "Career trajectory", v: "92" },
+                      { k: "Culture signal",    v: "88" },
+                      { k: "Comp range",        v: "in band" },
+                    ].map((row, i) => (
+                      <div key={row.k} className="flex items-baseline gap-3">
+                        <span className="shrink-0 text-sm font-medium text-neutral-600">
+                          {row.k}
+                        </span>
+                        <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-300" />
+                        <motion.span
+                          className="shrink-0 font-mono text-sm tabular-nums text-neutral-900"
+                          initial={{ opacity: 0, y: 4 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.45,
+                            delay: reduceMotion ? 0 : 0.3 + i * 0.12,
+                            ease: [0.25, 0.46, 0.45, 0.94],
+                          }}
+                        >
+                          {row.v}
+                        </motion.span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -1296,9 +1339,9 @@ export default function HomePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-xl font-semibold font-mono tabular-nums text-[#0051d5] leading-none">
+                      <span className="text-xl font-semibold font-mono tabular-nums text-neutral-900 leading-none transition-colors group-hover:text-[#0051d5]">
                         {PLACEHOLDER_SCORES[i + 1]}
-                        <span className="text-neutral-300 text-sm">%</span>
+                        <span className="text-neutral-400 text-sm">%</span>
                       </span>
                       <ArrowRight
                         size={16}
@@ -1323,32 +1366,50 @@ export default function HomePage() {
           {/* Stats */}
           <div className="mb-40 max-w-5xl mx-auto">
             <ScrollReveal className="text-center mb-20">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tight mb-6">
+              <h2 className="font-serif font-medium text-5xl md:text-7xl tracking-tight text-balance mb-6">
                 The numbers
                 <br />
-                <span className="text-neutral-300 font-thin italic">speak for themselves.</span>
+                <span className="font-serif italic text-neutral-500">speak for themselves.</span>
               </h2>
             </ScrollReveal>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
               {[
-                { to: 10,  decimals: 0, suffix: "K+", label: "Professionals Placed", delay: 0    },
-                { to: 95,  decimals: 0, suffix: "%",  label: "Match Accuracy",       delay: 0.1  },
-                { to: 3.2, decimals: 1, suffix: "x",  label: "Faster Hiring",        delay: 0.2  },
-                { to: 500, decimals: 0, suffix: "+",  label: "Partner Companies",    delay: 0.3  },
-              ].map((stat) => (
+                { to: 10,  decimals: 0, suffix: "K+", label: "Professionals Placed", delay: 0,   accent: false },
+                { to: 95,  decimals: 0, suffix: "%",  label: "Match Accuracy",       delay: 0.1, accent: true  },
+                { to: 3.2, decimals: 1, suffix: "x",  label: "Faster Hiring",        delay: 0.2, accent: false },
+                { to: 500, decimals: 0, suffix: "+",  label: "Partner Companies",    delay: 0.3, accent: false },
+              ].map((stat, i) => (
                 <motion.div
                   key={stat.label}
-                  className="text-center"
+                  className={`text-center ${i > 0 ? "md:border-l md:border-neutral-200/70" : ""}`}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: stat.delay, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
-                  <div className="text-5xl font-black tracking-tight text-black mb-2">
+                  <div
+                    className={`font-mono text-5xl font-semibold tabular-nums tracking-tight mb-3 ${
+                      stat.accent ? "text-[#0051d5]" : "text-neutral-900"
+                    }`}
+                  >
                     <CountUp to={stat.to} decimals={stat.decimals} suffix={stat.suffix} />
                   </div>
-                  <div className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                  {/* Signature motion: a thin blue baseline draws under each
+                      number as it resolves. Reduced motion renders it final. */}
+                  <motion.span
+                    aria-hidden
+                    className="mx-auto mb-4 block h-px w-10 origin-center bg-[#0051d5]"
+                    initial={{ scaleX: 0 }}
+                    whileInView={{ scaleX: 1 }}
+                    viewport={{ once: true }}
+                    transition={{
+                      duration: reduceMotion ? 0 : 1.2,
+                      delay: reduceMotion ? 0 : stat.delay + 0.25,
+                      ease: [0.25, 0.46, 0.45, 0.94],
+                    }}
+                  />
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500">
                     {stat.label}
                   </div>
                 </motion.div>
@@ -1356,25 +1417,53 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CTA block */}
+          {/* CTA block: the page's dark terminus. The blue signal thread
+              arrives from the spine above and lands on the single blue action.
+              Depth via grain + edge-highlight + hairline ring; a faint serif
+              "04" reads as the culminating act (scan / match / insert / evolve). */}
           <motion.div
-            className="relative bg-black rounded-[4rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.2)]"
+            className="relative bg-black rounded-[2.5rem] p-16 md:p-32 overflow-hidden text-white shadow-[0_50px_100px_rgba(0,0,0,0.2)] edge-highlight ring-1 ring-white/[0.06]"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
+            <div className="grain absolute inset-0 pointer-events-none" />
+            <span
+              aria-hidden
+              className="pointer-events-none select-none absolute -bottom-16 right-2 md:right-10 font-serif leading-none text-[13rem] md:text-[20rem] text-white/[0.04]"
+            >
+              04
+            </span>
+
             <div className="relative z-10 max-w-3xl mx-auto">
+              {/* Signal-thread terminus: the spine lands here on a blue node.
+                  Scrubbed via [data-thread]; renders drawn under reduced motion. */}
+              <div className="mb-10 flex justify-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    data-thread
+                    aria-hidden
+                    className="h-16 w-px origin-top"
+                    style={{
+                      background:
+                        "linear-gradient(to bottom, rgba(102,144,255,0) 0%, #6690ff 100%)",
+                    }}
+                  />
+                  <span className="-mt-0.5 h-2 w-2 rounded-full bg-[#6690ff]" />
+                </div>
+              </div>
+
               <motion.h2
-                className="text-6xl md:text-8xl font-black leading-[0.85] tracking-tight mb-12"
+                className="font-serif font-medium text-6xl md:text-8xl leading-[0.95] tracking-tight text-balance mb-12"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.15 }}
               >
-                READY TO
+                Ready to
                 <br />
-                EVOLVE?
+                evolve?
               </motion.h2>
               <p className="text-xl text-neutral-400 font-medium mb-16 leading-relaxed">
                 Join 10,000+ top professionals who are letting AI do the heavy
@@ -1384,12 +1473,12 @@ export default function HomePage() {
                 <MagneticButton>
                   <Link
                     href="/auth"
-                    className="bg-white text-black px-12 py-6 rounded-full font-black text-xl hover:scale-105 transition-transform shadow-2xl inline-block"
+                    className="bg-[#0051d5] text-white px-12 py-6 rounded-full font-black text-xl hover:scale-105 transition-transform shadow-2xl inline-block"
                   >
                     Get Started Free
                   </Link>
                 </MagneticButton>
-                <span className="text-sm font-bold text-neutral-400">
+                <span className="text-sm font-medium text-neutral-400">
                   Free to start. No card required.
                 </span>
               </div>
@@ -1401,8 +1490,15 @@ export default function HomePage() {
       {/* ================================================================
           FOOTER
           ================================================================ */}
-      <footer data-reveal className="w-full py-24 px-8 md:px-16 border-t border-neutral-100 bg-white">
-        <div className="max-w-[1920px] mx-auto">
+      <footer data-reveal className="relative w-full overflow-hidden py-24 px-8 md:px-16 border-t border-neutral-100 bg-white">
+        {/* Large faint serif wordmark: a quiet page terminus. */}
+        <span
+          aria-hidden
+          className="pointer-events-none select-none absolute -bottom-14 md:-bottom-24 left-1/2 -translate-x-1/2 font-serif leading-none text-[7rem] md:text-[16rem] text-neutral-900/[0.03]"
+        >
+          PathAI
+        </span>
+        <div className="relative z-10 max-w-[1920px] mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 mb-20">
             <div className="lg:col-span-4">
               <Link
@@ -1414,7 +1510,7 @@ export default function HomePage() {
                 </div>
                 PathAI
               </Link>
-              <p className="text-lg font-medium text-neutral-400 leading-relaxed max-w-sm">
+              <p className="font-serif text-xl text-neutral-500 leading-relaxed max-w-sm">
                 The intelligent curator for high-growth tech careers. Built for
                 builders.
               </p>
@@ -1439,7 +1535,7 @@ export default function HomePage() {
                 },
               ].map((col) => (
                 <div key={col.title} className="space-y-6">
-                  <p className="text-xs font-black uppercase tracking-[0.3em] text-black">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-500">
                     {col.title}
                   </p>
                   <ul className="space-y-4">
@@ -1447,7 +1543,7 @@ export default function HomePage() {
                       <li key={link.label}>
                         <Link
                           href={link.href}
-                          className="text-sm font-bold text-neutral-400 hover:text-black transition-colors"
+                          className="text-sm font-medium text-neutral-400 hover:text-black transition-colors"
                         >
                           {link.label}
                         </Link>
@@ -1460,19 +1556,19 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center pt-12 border-t border-neutral-100 gap-8">
-            <div className="text-xs font-bold text-neutral-400 tracking-widest uppercase">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-neutral-400">
               © 2026 PathAI. All Rights Reserved.
             </div>
             <div className="flex gap-12">
               <a
                 href="#"
-                className="text-xs font-bold text-neutral-400 hover:text-black transition-colors uppercase tracking-[0.2em]"
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400 hover:text-black transition-colors"
               >
                 Privacy Policy
               </a>
               <a
                 href="#"
-                className="text-xs font-bold text-neutral-400 hover:text-black transition-colors uppercase tracking-[0.2em]"
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400 hover:text-black transition-colors"
               >
                 Terms of Use
               </a>
