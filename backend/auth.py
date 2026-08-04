@@ -18,20 +18,67 @@ def get_http_client() -> httpx.AsyncClient:
     return _http_client
 
 
-def _verify_jwt_locally(token: str) -> dict | None:
-    """Verify a Supabase access token locally using the project JWT secret.
-    Returns the user dict (with 'sub' = user id) or None if verification fails.
-    Returns None (rather than raising) so callers can fall back to the network
-    path when the secret isn't configured."""
-    if not SUPABASE_JWT_SECRET:
+# Cached JWKS client for verifying Supabase's asymmetric (ES256) access tokens.
+_jwks_client: "jwt.PyJWKClient | None" = None
+
+
+def _get_jwks_client() -> "jwt.PyJWKClient | None":
+    """Lazily build a cached client for the project's JWKS endpoint, used to
+    verify ES256/RS256 access tokens. Returns None if the project URL isn't
+    configured (callers then fall back to the network verification path)."""
+    global _jwks_client
+    if not SUPABASE_URL:
         return None
-    try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
+    if _jwks_client is None:
+        _jwks_client = jwt.PyJWKClient(
+            f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json",
+            lifespan=3600,  # signing keys rotate rarely; refetch at most hourly
         )
+    return _jwks_client
+
+
+def _verify_jwt_locally(token: str) -> dict | None:
+    """Verify a Supabase access token locally.
+
+    Supabase signs access tokens either with the legacy HS256 shared secret or,
+    on newer projects, an asymmetric key (ES256) published via JWKS. We pick the
+    verification path from the token's own ``alg`` header so both schemes work.
+    Returns the user dict (with 'sub' = user id), or None to let the caller fall
+    back to network verification (nothing configured, or JWKS unreachable)."""
+    try:
+        alg = jwt.get_unverified_header(token).get("alg", "")
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    try:
+        if alg == "HS256":
+            # Legacy symmetric secret. If unset, defer to the network path.
+            if not SUPABASE_JWT_SECRET:
+                return None
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
+        elif alg in ("ES256", "RS256"):
+            # Modern asymmetric signing key: verify with the JWKS public key.
+            client = _get_jwks_client()
+            if client is None:
+                return None
+            signing_key = client.get_signing_key_from_jwt(token)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=[alg],
+                audience="authenticated",
+            )
+        else:
+            # Unknown algorithm — defer to the network verification path.
+            return None
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,6 +89,11 @@ def _verify_jwt_locally(token: str) -> dict | None:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
+    except Exception:
+        # JWKS fetch/parse failure — don't hard-fail auth; let the network
+        # verification path (Supabase /auth/v1/user) try instead.
+        return None
+
     if "sub" not in payload:
         return None
     return {"sub": payload["sub"], **payload}
