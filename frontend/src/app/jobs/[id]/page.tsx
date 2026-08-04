@@ -397,10 +397,133 @@ export default function JobDetailPage() {
                 )}
               </div>
             </motion.section>
+
+            {/* ── AI Toolkit: prep + cover letter, side by side (fills the
+                 space that used to sit empty under a short description) ── */}
+            <motion.section
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <span className={`${SPEC} block mb-5`}>Prepare · AI Toolkit</span>
+              <div className="grid sm:grid-cols-2 gap-5">
+                {/* Interview Prep Card */}
+                <motion.div
+                  whileHover={reduceMotion ? undefined : { y: -2 }}
+                  className="flex flex-col bg-neutral-900 dark:bg-neutral-900 p-6 rounded-2xl text-white cursor-pointer group shadow-premium-lg edge-highlight ring-1 ring-white/[0.06]"
+                  onClick={() => setShowCoach(true)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+                      <Lightbulb className="w-5 h-5 text-white" strokeWidth={1.75} />
+                    </div>
+                    <span className={`${SPEC} text-neutral-500`}>AI</span>
+                  </div>
+                  <h3 className="font-semibold text-white text-lg mb-1 tracking-tight">Interview Prep</h3>
+                  <p className="text-sm text-white/50 font-medium leading-relaxed mb-5">
+                    Role-specific questions with expert tips tailored to this position.
+                  </p>
+                  <div className="mt-auto flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white group-hover:text-white/80 transition-colors">
+                    Generate Questions
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+                  </div>
+                </motion.div>
+
+                {/* Cover Letter Card */}
+                <motion.div
+                  whileHover={reduceMotion ? undefined : { y: -2 }}
+                  className="flex flex-col bg-white dark:bg-neutral-900 p-6 rounded-2xl cursor-pointer group shadow-premium ring-1 ring-neutral-200/70 dark:ring-white/[0.06] border border-neutral-200/70 dark:border-neutral-800"
+                  onClick={() => setShowCoverLetter(true)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-neutral-500 dark:text-neutral-400" strokeWidth={1.75} />
+                    </div>
+                    <span className={SPEC}>AI</span>
+                  </div>
+                  <h3 className="font-semibold text-neutral-900 dark:text-white text-lg mb-1 tracking-tight">Cover Letter</h3>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed mb-5">
+                    Draft a tailored cover letter from your resume in seconds.
+                  </p>
+                  <div className="mt-auto flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-neutral-900 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-[#6690ff] transition-colors">
+                    Draft Letter
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+                  </div>
+                </motion.div>
+              </div>
+            </motion.section>
+
+            {/* ── Company Overview (full-width, two-column detail grid) ── */}
+            <motion.section
+              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.14, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="bg-white dark:bg-neutral-900 p-7 md:p-8 rounded-2xl ring-1 ring-neutral-200/70 dark:ring-white/[0.06] border border-neutral-200/70 dark:border-neutral-800 shadow-premium"
+            >
+              <span className={`${SPEC} block mb-4`}>Company · Overview</span>
+              <h3 className="font-semibold text-xl mb-4 tracking-tight text-neutral-900 dark:text-white">
+                About {job.company || "this company"}
+              </h3>
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-6 max-w-2xl">
+                {job.company} is hiring for {formatDept(job.department)} talent.
+                This role was posted {timeAgo(job.posted_date)}.
+                {job.applicant_count > 0 && (
+                  <>
+                    {" "}
+                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{job.applicant_count}</span> candidates have applied.
+                  </>
+                )}
+              </p>
+              <div className="grid sm:grid-cols-2 gap-x-10 gap-y-3">
+                {job.location && (
+                  <div className="flex items-baseline gap-3 text-sm">
+                    <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Location</span>
+                    <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
+                    <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{job.location}</span>
+                  </div>
+                )}
+                {job.salary_range && (
+                  <div className="flex items-baseline gap-3 text-sm">
+                    <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Salary</span>
+                    <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
+                    <span className="shrink-0 font-semibold font-mono tabular-nums text-neutral-900 dark:text-white">{job.salary_range}</span>
+                  </div>
+                )}
+                <div className="flex items-baseline gap-3 text-sm">
+                  <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Department</span>
+                  <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
+                  <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{formatDept(job.department)}</span>
+                </div>
+                <div className="flex items-baseline gap-3 text-sm">
+                  <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Level</span>
+                  <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
+                  <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{formatSeniority(job.seniority)}</span>
+                </div>
+              </div>
+
+              {/* Salary percentile detail (collapsible, self-fetching) */}
+              {job.salary_range && (
+                <div className="mt-6 pt-5 border-t border-neutral-100 dark:border-neutral-800">
+                  <SalaryInsights jobId={job.id} />
+                </div>
+              )}
+
+              {job.external_url && (
+                <a
+                  href={job.external_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full mt-6 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
+                  View Original Posting
+                </a>
+              )}
+            </motion.section>
           </div>
 
-          {/* ── Right Sidebar (4 cols, sticky) ── */}
-          <aside className="lg:col-span-4 space-y-6 lg:sticky lg:top-28">
+          {/* ── Right rail: the decision card only (sticky) ── */}
+          <aside className="lg:col-span-4 lg:sticky lg:top-28">
 
             {/* AI Match Analysis, text-based: verdict, evidence, why.
                 Mono score is the single blue moment; the primary Apply below it
@@ -489,125 +612,6 @@ export default function JobDetailPage() {
                 </Link>
               </div>
             </motion.div>
-
-            {/* Interview Prep Card */}
-            <motion.div
-              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
-              whileHover={reduceMotion ? undefined : { y: -2 }}
-              className="bg-neutral-900 dark:bg-neutral-900 p-6 rounded-2xl text-white cursor-pointer group shadow-premium-lg edge-highlight ring-1 ring-white/[0.06]"
-              onClick={() => setShowCoach(true)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                  <Lightbulb className="w-5 h-5 text-white" strokeWidth={1.75} />
-                </div>
-                <span className={`${SPEC} text-neutral-500`}>AI</span>
-              </div>
-              <h3 className="font-semibold text-white text-lg mb-1 tracking-tight">Interview Prep</h3>
-              <p className="text-sm text-white/50 font-medium leading-relaxed mb-5">
-                Role-specific questions with expert tips tailored to this position.
-              </p>
-              <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-white group-hover:text-white/80 transition-colors">
-                Generate Questions
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
-              </div>
-            </motion.div>
-
-            {/* Cover Letter Card: surfaces the drafting tool (state already wired) */}
-            <motion.div
-              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.13, ease: [0.25, 0.46, 0.45, 0.94] }}
-              whileHover={reduceMotion ? undefined : { y: -2 }}
-              className="bg-white dark:bg-neutral-900 p-6 rounded-2xl cursor-pointer group shadow-premium ring-1 ring-neutral-200/70 dark:ring-white/[0.06] border border-neutral-200/70 dark:border-neutral-800"
-              onClick={() => setShowCoverLetter(true)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-neutral-500 dark:text-neutral-400" strokeWidth={1.75} />
-                </div>
-                <span className={SPEC}>AI</span>
-              </div>
-              <h3 className="font-semibold text-neutral-900 dark:text-white text-lg mb-1 tracking-tight">Cover Letter</h3>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed mb-5">
-                Draft a tailored cover letter from your resume in seconds.
-              </p>
-              <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-neutral-900 dark:text-white group-hover:text-[#0051d5] dark:group-hover:text-[#6690ff] transition-colors">
-                Draft Letter
-                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
-              </div>
-            </motion.div>
-
-            {/* Company Overview Card */}
-            <motion.div
-              initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.16, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="bg-white dark:bg-neutral-900 p-7 rounded-2xl ring-1 ring-neutral-200/70 dark:ring-white/[0.06] border border-neutral-200/70 dark:border-neutral-800 shadow-premium"
-            >
-              <span className={`${SPEC} block mb-4`}>Company · Overview</span>
-              <h3 className="font-semibold text-lg mb-4 tracking-tight text-neutral-900 dark:text-white">
-                About {job.company || "this company"}
-              </h3>
-              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-6">
-                {job.company} is hiring for {formatDept(job.department)} talent.
-                This role was posted {timeAgo(job.posted_date)}.
-                {job.applicant_count > 0 && (
-                  <>
-                    {" "}
-                    <span className="font-mono tabular-nums text-neutral-900 dark:text-white">{job.applicant_count}</span> candidates have applied.
-                  </>
-                )}
-              </p>
-              <div className="space-y-3">
-                {job.location && (
-                  <div className="flex items-baseline gap-3 text-sm">
-                    <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Location</span>
-                    <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
-                    <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{job.location}</span>
-                  </div>
-                )}
-                {job.salary_range && (
-                  <div className="flex items-baseline gap-3 text-sm">
-                    <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Salary</span>
-                    <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
-                    <span className="shrink-0 font-semibold font-mono tabular-nums text-neutral-900 dark:text-white">{job.salary_range}</span>
-                  </div>
-                )}
-                <div className="flex items-baseline gap-3 text-sm">
-                  <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Department</span>
-                  <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
-                  <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{formatDept(job.department)}</span>
-                </div>
-                <div className="flex items-baseline gap-3 text-sm">
-                  <span className="shrink-0 text-neutral-500 dark:text-neutral-400 font-medium">Level</span>
-                  <span className="flex-1 translate-y-[-3px] border-b border-dotted border-neutral-200 dark:border-neutral-700" />
-                  <span className="shrink-0 font-semibold text-neutral-900 dark:text-white">{formatSeniority(job.seniority)}</span>
-                </div>
-              </div>
-
-              {/* Salary percentile detail (collapsible, self-fetching) */}
-              {job.salary_range && (
-                <div className="mt-6 pt-5 border-t border-neutral-100 dark:border-neutral-800">
-                  <SalaryInsights jobId={job.id} />
-                </div>
-              )}
-
-              {job.external_url && (
-                <a
-                  href={job.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full mt-6 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 text-sm font-semibold text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
-                >
-                  <ExternalLink className="w-4 h-4" strokeWidth={1.75} />
-                  View Original Posting
-                </a>
-              )}
-            </motion.div>
-
           </aside>
         </div>
       </main>
