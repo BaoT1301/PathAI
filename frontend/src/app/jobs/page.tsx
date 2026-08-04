@@ -115,7 +115,7 @@ function FeaturedJobCard({
           </Link>
           <button
             onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
-            aria-label={isSaved ? "View saved job" : "Save job"}
+            aria-label={isSaved ? "Remove bookmark" : "Save job"}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors shrink-0"
           >
             {isSaved
@@ -168,7 +168,7 @@ function FeaturedJobCard({
         </Link>
         <button
           onClick={(e) => { e.preventDefault(); onBookmark(job.id); }}
-          aria-label={isSaved ? "View saved job" : "Save job"}
+          aria-label={isSaved ? "Remove bookmark" : "Save job"}
           className="w-9 h-9 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shrink-0"
         >
           {isSaved
@@ -234,7 +234,7 @@ function JobListRow({
         )}
         <button
           onClick={(e) => { e.stopPropagation(); onBookmark(job.id); }}
-          aria-label={isSaved ? "View saved job" : "Save job"}
+          aria-label={isSaved ? "Remove bookmark" : "Save job"}
           className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
         >
           {isSaved
@@ -361,20 +361,36 @@ export default function JobsPage() {
   }, [session]);
 
   const handleBookmark = async (jobId: string) => {
+    // Saving requires an account; send guests to sign in.
     if (!session?.access_token) {
       router.push("/auth");
       return;
     }
-    if (savedIds.has(jobId)) {
-      router.push("/dashboard");
-      return;
-    }
+    const wasSaved = savedIds.has(jobId);
+    // Optimistically toggle the icon in place so the click feels instant and
+    // the user stays on the feed (no jarring navigation to the dashboard).
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (wasSaved) next.delete(jobId);
+      else next.add(jobId);
+      return next;
+    });
     try {
-      await saveJob(jobId, session.access_token);
-      recordEvent(jobId, "saved", session.access_token);
-      setSavedIds((prev) => new Set([...prev, jobId]));
-      router.push("/dashboard");
-    } catch { /* ignore */ }
+      if (wasSaved) {
+        await unsaveJob(jobId, session.access_token);
+      } else {
+        await saveJob(jobId, session.access_token);
+        recordEvent(jobId, "saved", session.access_token);
+      }
+    } catch {
+      // Persist failed — revert to the true state so the icon can't lie.
+      setSavedIds((prev) => {
+        const next = new Set(prev);
+        if (wasSaved) next.add(jobId);
+        else next.delete(jobId);
+        return next;
+      });
+    }
   };
 
   const loadJobs = useCallback(async () => {

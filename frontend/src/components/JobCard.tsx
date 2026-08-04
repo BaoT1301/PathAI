@@ -97,8 +97,13 @@ export default function JobCard({ job, index = 0, skillGap, initialApplicationSt
     try {
       await applyToJob(job.id, session.access_token);
       setAppStatus("applied");
-    } catch {
-      setAppStatus("applied");
+    } catch (err) {
+      // Never fake success: a 409 means it's genuinely already applied, so mark
+      // it applied. Any other failure leaves the button as "Quick Apply" so the
+      // user can retry — the dashboard must never disagree with the button.
+      if (err instanceof Error && /already applied/i.test(err.message)) {
+        setAppStatus("applied");
+      }
     } finally {
       setApplying(false);
     }

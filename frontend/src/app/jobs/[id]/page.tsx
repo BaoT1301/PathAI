@@ -49,6 +49,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [appStatus, setAppStatus] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const [showCoach, setShowCoach] = useState(false);
   const [showCoverLetter, setShowCoverLetter] = useState(false);
   const [showAppliedModal, setShowAppliedModal] = useState(false);
@@ -86,12 +87,22 @@ export default function JobDetailPage() {
   const handleApply = async () => {
     if (!session?.access_token || applying || !job) return;
     setApplying(true);
+    setApplyError(null);
     try {
       await applyToJob(job.id, session.access_token);
       setAppStatus("applied");
       recordEvent(job.id, "applied", session.access_token);
-    } catch {
-      setAppStatus("applied");
+    } catch (e) {
+      // A 409 means it's already recorded — treat as success. Any other failure
+      // must surface: never fake "Applied", or the dashboard stays empty while
+      // the button lies.
+      if (e instanceof Error && /already applied/i.test(e.message)) {
+        setAppStatus("applied");
+      } else {
+        setApplyError(
+          e instanceof Error ? e.message : "Couldn't submit your application. Please try again."
+        );
+      }
     } finally {
       setApplying(false);
     }
@@ -107,12 +118,21 @@ export default function JobDetailPage() {
     setShowAppliedModal(false);
     if (!session?.access_token || !job) return;
     setApplying(true);
+    setApplyError(null);
     try {
       await applyToJob(job.id, session.access_token);
       setAppStatus("applied");
       recordEvent(job.id, "applied", session.access_token);
-    } catch {
-      setAppStatus("applied");
+    } catch (e) {
+      // A 409 means it's already recorded — treat that as success; any other
+      // failure must surface so the user knows it wasn't saved.
+      if (e instanceof Error && /already applied/i.test(e.message)) {
+        setAppStatus("applied");
+      } else {
+        setApplyError(
+          e instanceof Error ? e.message : "Couldn't record your application. Please try again."
+        );
+      }
     } finally {
       setApplying(false);
     }
@@ -604,6 +624,11 @@ export default function JobDetailPage() {
               {/* primary action + secondary link */}
               <div className="mt-6 space-y-3">
                 {renderApply("primary")}
+                {applyError && (
+                  <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400 text-center leading-relaxed">
+                    {applyError}
+                  </p>
+                )}
                 <Link
                   href="/resume"
                   className="block w-full text-center font-mono text-[11px] uppercase tracking-[0.14em] text-neutral-400 dark:text-neutral-500 hover:text-[#0051d5] dark:hover:text-[#6690ff] transition-colors"
